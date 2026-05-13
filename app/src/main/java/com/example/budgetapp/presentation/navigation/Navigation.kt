@@ -26,6 +26,18 @@ import com.example.budgetapp.presentation.statistics.StatisticsScreen
 import com.example.budgetapp.presentation.transactions.AddEditTransactionScreen
 import com.example.budgetapp.presentation.transactions.TransactionListScreen
 
+sealed class Screen(val route: String) {
+    object Dashboard : Screen("dashboard")
+    object Transactions : Screen("transactions")
+    object Statistics : Screen("statistics")
+    object Settings : Screen("settings")
+    object Budget : Screen("budget")
+    object Savings : Screen("savings")
+    object AddEditTransaction : Screen("add_edit_transaction/{transactionId}") {
+        fun createRoute(transactionId: Long = -1L) = "add_edit_transaction/$transactionId"
+    }
+}
+
 data class BottomNavItem(val label: String, val icon: ImageVector, val screen: Screen)
 
 val bottomNavItems = listOf(
@@ -76,11 +88,7 @@ fun AppNavGraph(isDarkMode: Boolean, onToggleDarkMode: (Boolean) -> Unit) {
             composable(Screen.Transactions.route) { TransactionListScreen(navController) }
             composable(Screen.Statistics.route) { StatisticsScreen(navController) }
             composable(Screen.Settings.route) {
-                SettingsScreen(
-                    navController = navController,
-                    isDarkMode = isDarkMode,
-                    onToggleDarkMode = onToggleDarkMode
-                )
+                SettingsScreen(navController = navController, isDarkMode = isDarkMode, onToggleDarkMode = onToggleDarkMode)
             }
             composable(Screen.Budget.route) { BudgetScreen(navController) }
             composable(Screen.Savings.route) { SavingsScreen(navController) }

@@ -1,236 +1,382 @@
 # BudgetApp – Opis projektu
 
-## 1. Co robi aplikacja?
+## Co robi aplikacja?
 
-BudgetApp to aplikacja Android do zarządzania budżetem osobistym. Działa w pełni offline (bez serwera, bez internetu). Użytkownik może:
+Aplikacja Android do zarządzania budżetem osobistym. Działa w 100% offline – bez serwera, bez internetu, dane są tylko na telefonie. Użytkownik może:
 
-- Dodawać transakcje: wydatki, przychody, odkładanie na oszczędności, pobieranie z oszczędności
-- Planować budżet miesięczny per kategoria (ile chcę wydać na jedzenie, transport itp.)
-- Zarządzać "skarbonkami" – osobnymi celami oszczędnościowymi (np. Wakacje, Fundusz awaryjny)
-- Filtrować i przeglądać historię transakcji po miesiącu, kategorii, typie, kwocie
+- Dodawać wydatki i przychody przypisane do kategorii (np. Jedzenie, Transport)
+- Zaplanować ile chce wydać w danym miesiącu per kategoria (budżet miesięczny)
+- Odkładać pieniądze do "skarbonki" (np. Wakacje, Fundusz awaryjny) i z niej wypłacać
+- Przeglądać historię transakcji z filtrami (miesiąc, kategoria, typ, kwota)
 - Oglądać statystyki wydatków z wykresem kołowym
-- Eksportować dane do pliku Excel (.xlsx) – historia miesięczna, podsumowanie kategorii, raport roczny
-- Przełączać tryb ciemny/jasny
+- Eksportować dane do pliku Excel (.xlsx)
+- Przełączać ciemny/jasny motyw
 
 ---
 
-## 2. Architektura – poziom MAKRO
+## Architektura – jak to jest zbudowane ogólnie
 
-Projekt stosuje **Clean Architecture** podzieloną na 3 warstwy:
+Projekt stosuje **Clean Architecture** – to po prostu podział kodu na 3 osobne "piętry":
 
 ```
-┌─────────────────────────────────┐
-│      PRESENTATION (UI)          │  ← Composable, ViewModel
-├─────────────────────────────────┤
-│      DOMAIN (logika biznesowa)  │  ← modele danych, interfejsy repozytoriów
-├─────────────────────────────────┤
-│      DATA (dostęp do danych)    │  ← Room, implementacje repozytoriów
-└─────────────────────────────────┘
+┌──────────────────────────────────────┐
+│  PRESENTATION – to co widzi użytkownik  │  ekrany, ViewModele
+├──────────────────────────────────────┤
+│  DOMAIN – logika biznesowa            │  modele danych, kontrakty
+├──────────────────────────────────────┤
+│  DATA – skąd bierzemy dane            │  baza danych Room, repozytoria
+└──────────────────────────────────────┘
 ```
 
-**Zasada zależności:** każda warstwa zna tylko warstwę poniżej. UI zna domain, data zna domain. UI nie zna data bezpośrednio.
+**Zasada:** każde piętro rozmawia tylko z piętrem poniżej. UI nie wie jak działa baza danych – wie tylko, że może poprosić repozytorium o dane.
 
-Wzorzec projektowy: **MVVM** (Model–View–ViewModel)
-- **View** = ekrany Compose (`*Screen.kt`)
-- **ViewModel** = logika stanu ekranu (`*ViewModel.kt`)
+Wzorzec: **MVVM** (Model–View–ViewModel)
+- **View** = ekrany Compose (to co widać)
+- **ViewModel** = logika ekranu, trzyma stan
 - **Model** = dane z repozytoriów
 
 ---
 
-## 3. Stack technologiczny
+## Omówienie każdego pliku z osobna
 
-| Technologia | Rola |
-|---|---|
-| Kotlin 2.2 | język programowania |
-| Jetpack Compose | deklaratywne UI (nie XML) |
-| Room 2.7 | baza danych SQLite z ORM |
-| KAPT | procesor adnotacji dla Room |
-| Navigation Compose | nawigacja między ekranami |
-| StateFlow / Flow | reaktywny przepływ danych |
-| Coroutines | asynchroniczność (suspend functions) |
-| Material 3 | komponenty UI i theming |
-| FileProvider | bezpieczne udostępnianie pliku xlsx |
+Projekt ma dokładnie **20 plików Kotlin**. Oto co robi każdy z nich:
 
 ---
 
-## 4. Struktura pakietów – poziom MEZO
+### MainActivity.kt
+**Co to jest:** Jedyna Activity w całej aplikacji. Activity to "okno" Androida – bez niej aplikacja nie istnieje. Można myśleć o niej jak o ramce obrazu: sama nic nie pokazuje, ale bez niej nie byłoby gdzie powiesić obrazu.
 
-```
-com.example.budgetapp/
-│
-├── BudgetApp.kt              ← Application class (punkt startowy procesu)
-├── AppContainer.kt           ← ręczny Dependency Injection
-│
-├── data/
-│   ├── local/
-│   │   ├── AppDatabase.kt    ← definicja bazy Room (singleton)
-│   │   ├── DatabaseSeeder.kt ← wypełnianie przykładowymi danymi przy 1. uruchomieniu
-│   │   ├── dao/              ← interfejsy zapytań SQL (Room generuje implementację)
-│   │   │   ├── TransactionDao.kt
-│   │   │   ├── CategoryDao.kt
-│   │   │   ├── BudgetPlanDao.kt
-│   │   │   └── SavingsJarDao.kt
-│   │   └── entity/           ← klasy mapowane na tabele bazy danych
-│   │       ├── TransactionEntity.kt
-│   │       ├── CategoryEntity.kt
-│   │       ├── BudgetPlanEntity.kt
-│   │       └── SavingsJarEntity.kt
-│   └── repository/           ← implementacje repozytoriów
-│
-├── domain/
-│   ├── model/                ← czyste modele danych (bez Room, bez Android)
-│   │   ├── Transaction.kt
-│   │   ├── Category.kt
-│   │   ├── BudgetPlan.kt
-│   │   ├── SavingsJar.kt
-│   │   ├── TransactionType.kt  ← enum: EXPENSE, INCOME, SAVE_TO_JAR, WITHDRAW_FROM_JAR
-│   │   └── CategoryType.kt     ← enum: EXPENSE, INCOME
-│   └── repository/           ← interfejsy repozytoriów (kontrakty)
-│
-├── presentation/
-│   ├── navigation/
-│   │   ├── Screen.kt         ← definicja tras nawigacji
-│   │   └── NavGraph.kt       ← kompozycja ekranów + bottom navigation bar
-│   ├── common/
-│   │   ├── FormatUtils.kt    ← formatowanie kwot, dat, miesięcy
-│   │   └── XlsxWriter.kt    ← generator plików Excel (ZipOutputStream)
-│   ├── dashboard/            ← ekran główny
-│   ├── transactions/         ← lista transakcji + dodawanie/edycja
-│   ├── statistics/           ← wykres kołowy + eksport
-│   ├── budget/               ← planowanie budżetu
-│   ├── savings/              ← skarbonki
-│   └── settings/             ← kategorie + dark mode
-│
-├── ui/theme/
-│   ├── Theme.kt              ← kolory jasny/ciemny, MaterialTheme
-│   └── Type.kt               ← typografia
-│
-└── MainActivity.kt           ← jedyna Activity, hostuje cały Compose
-```
+**Co robi:** Wywołuje `enableEdgeToEdge()` (żeby aplikacja rysowała pod paskiem stanu), potem odpala Compose i wyświetla `AppNavGraph`. Trzyma też stan `isDarkMode` – jeden boolean decydujący o motywie.
 
 ---
 
-## 5. Przepływ danych – poziom MIKRO
+### BudgetApp.kt
+**Co to jest:** Klasa Application. Istnieje przez cały czas życia procesu aplikacji – uruchamia się zanim cokolwiek innego, i żyje do momentu zamknięcia aplikacji.
 
-### Jak dane płyną od bazy do ekranu?
-
-```
-SQLite (Room)
-    ↓  Flow<List<Entity>>  (DAO)
-    ↓  map { entity.toDomain() }  (Repository)
-    ↓  Flow<List<DomainModel>>
-    ↓  combine(...) / collect  (ViewModel)
-    ↓  MutableStateFlow<UiState>
-    ↓  collectAsState()  (Composable)
-    ↓  rekomposition UI
-```
-
-**Flow** to strumień danych – Room automatycznie emituje nową wartość kiedy dane w bazie się zmienią. Dzięki temu UI jest zawsze aktualne bez ręcznego odświeżania.
-
-### Przykład konkretny – DashboardScreen:
-
-1. `DashboardViewModel.init` wywołuje `combine(transactionRepo.getTransactionsByMonth(), categoryRepo.getAllCategories(), budgetPlanRepo.getBudgetPlansByMonth())`
-2. `combine` czeka na wszystkie 3 strumienie i oblicza `DashboardState` (suma wydatków, przychodów, ostatnie 8 transakcji)
-3. `DashboardScreen` robi `val state by viewModel.state.collectAsState()`
-4. Compose automatycznie przerysowuje ekran gdy `state` się zmieni
+**Co robi:** Inicjalizuje `AppContainer` (patrz niżej). Dzięki temu baza danych i repozytoria są gotowe zanim którykolwiek ekran ich potrzebuje.
 
 ---
 
-## 6. Baza danych
+### AppContainer.kt
+**Co to jest:** Ręcznie napisany "pojemnik na zależności". Zamiast używać biblioteki jak Hilt czy Dagger, wszystko jest tu sklejone ręcznie.
 
-4 tabele Room:
-
-| Tabela | Kolumny kluczowe |
-|---|---|
-| `transactions` | id, type (String), amount, category_id, savings_jar_id, date, created_at |
-| `categories` | id, name, type, is_default, color_hex |
-| `budget_plans` | id, category_id, month (format "YYYY-MM"), planned_amount |
-| `savings_jars` | id, name, current_amount, goal_amount |
-
-**Dlaczego `type` jako String a nie enum?** Room nie obsługuje natywnie enumów – przechowujemy `TransactionType.name` (np. `"EXPENSE"`) i przy odczycie robimy `TransactionType.valueOf(type)`.
-
-**Dlaczego data jako `Long`?** Timestamp milliseconds od epoch – standardowe podejście w Android, niezależne od strefy czasowej przy zapisie.
+**Co robi:** Tworzy bazę danych (`AppDatabase`) i na jej podstawie tworzy 4 repozytoria. Każdy ViewModel dostaje repozytorium właśnie stąd. Analogia: to jak szatnia na siłowni – każdy (ViewModel) przychodzi, bierze swoje rzeczy (repozytorium) i idzie pracować.
 
 ---
 
-## 7. Dependency Injection (ręczne)
+### data/local/Database.kt
+**Co to jest:** Dwa elementy w jednym pliku:
+1. `AppDatabase` – definicja bazy danych SQLite (poprzez Room)
+2. `DatabaseSeeder` – kod który przy pierwszym uruchomieniu wstawia do bazy domyślne kategorie (Jedzenie, Transport, itp.)
 
-Projekt nie używa Hilt/Dagger. Zamiast tego:
+**Co robi:** `AppDatabase` to singleton – jeden obiekt bazy na całą aplikację, stworzony metodą `Room.databaseBuilder(...)`. Room na podstawie tej klasy generuje automatycznie cały kod obsługi SQLite.
 
-```
-BudgetApp (Application class)
-    └── AppContainer (lazy)
-            ├── AppDatabase (singleton)
-            ├── TransactionRepository
-            ├── CategoryRepository
-            ├── BudgetPlanRepository
-            └── SavingsJarRepository
-```
+---
 
-Każdy ViewModel dostaje repozytorium przez `companion object factory(container)`:
+### data/local/entity/Entities.kt
+**Co to jest:** Cztery klasy danych oznaczone `@Entity` – każda mapuje się na jedną tabelę w bazie SQLite.
 
+**Co robi:** Definiuje strukturę tabel:
+- `TransactionEntity` → tabela `transactions` (id, typ, kwota, kategoria, data...)
+- `CategoryEntity` → tabela `categories` (id, nazwa, typ, kolor...)
+- `BudgetPlanEntity` → tabela `budget_plans` (id, kategoria, miesiąc, planowana kwota)
+- `SavingsJarEntity` → tabela `savings_jars` (id, nazwa, aktualna kwota, cel)
+
+Każda entity ma też funkcję rozszerzającą `toDomain()` – konwertuje "surowy" wiersz z bazy na "czysty" obiekt domenowy.
+
+---
+
+### data/local/dao/Daos.kt
+**Co to jest:** Cztery interfejsy DAO (Data Access Object). Każdy definiuje zapytania SQL dla jednej tabeli – ale zamiast pisać SQL ręcznie, używamy adnotacji Room.
+
+**Co robi:** Przykład:
 ```kotlin
-// W ekranie:
-val viewModel: DashboardViewModel = viewModel(
-    factory = DashboardViewModel.factory(app.container)
-)
+@Query("SELECT * FROM transactions WHERE strftime('%Y-%m', datetime(date/1000,'unixepoch')) = :month")
+fun getTransactionsByMonth(month: String): Flow<List<TransactionEntity>>
 ```
+Room widzi tę adnotację i **automatycznie generuje implementację** (kod który faktycznie odpytuje SQLite). Stąd potrzebny jest KAPT (procesor adnotacji).
 
 ---
 
-## 8. Nawigacja
+### data/repository/Repositories.kt
+**Co to jest:** Cztery klasy implementujące interfejsy repozytoriów z warstwy domain. To "most" między DAO (surowe wiersze bazy) a resztą aplikacji (czyste modele).
 
-Bottom Navigation Bar z 4 zakładkami: Start / Transakcje / Statystyki / Ustawienia
-
-Ekrany "push" (otwierane na stosie nawigacyjnym):
-- Plan budżetu (z Dashboardu)
-- Oszczędności (z Dashboardu)
-- Dodaj/Edytuj transakcję (z każdego miejsca)
-
-`AddEditTransaction` przyjmuje argument `transactionId: Long` – jeśli `-1`, to nowa transakcja; jeśli > 0, to edycja istniejącej.
+**Co robi:** Każda metoda pobiera dane z DAO, konwertuje entity na model domenowy (`entity.toDomain()`), i zwraca Flow lub wykonuje operację. UI nigdy nie widzi `Entity` – widzi tylko czyste modele z warstwy domain.
 
 ---
 
-## 9. Eksport Excel (XlsxWriter)
+### domain/model/Models.kt
+**Co to jest:** Czyste modele danych – "prawda" o tym jak wyglądają dane w aplikacji. Nie ma tu ani jednego importu z pakietu Android ani Room.
 
-Format `.xlsx` to tak naprawdę plik ZIP z plikami XML w środku (standard OpenXML). `XlsxWriter.kt` tworzy go od zera używając tylko `ZipOutputStream` z biblioteki standardowej Javy – bez żadnej zewnętrznej biblioteki do excela.
+**Co robi:** Definiuje:
+- `Transaction`, `Category`, `BudgetPlan`, `SavingsJar` – data classy z polami
+- `TransactionType` – enum: `EXPENSE`, `INCOME`, `SAVE_TO_JAR`, `WITHDRAW_FROM_JAR`
+- `CategoryType` – enum: `EXPENSE`, `INCOME`
 
-Struktura pliku xlsx wewnątrz:
-```
-[Content_Types].xml
-_rels/.rels
-xl/workbook.xml
-xl/sharedStrings.xml   ← teksty (żeby nie duplikować)
-xl/styles.xml
-xl/worksheets/sheet1.xml
-```
-
-Plik jest zapisywany do katalogu cache aplikacji i udostępniany innym aplikacjom przez `FileProvider` (mechanizm bezpieczeństwa Android – aplikacje nie mogą bezpośrednio czytać plików innych aplikacji).
+Dlaczego osobne od Entity? Bo Entity to "jak baza widzi dane", a Model to "jak aplikacja widzi dane". Jeśli zmienimy bazę danych na inną, modele domenowe zostają bez zmian.
 
 ---
 
-## 10. Pytania, jakie może zadać prowadzący
+### domain/repository/Repositories.kt
+**Co to jest:** Cztery interfejsy – kontrakty opisujące co można zrobić z danymi. To "menu" usług: "mogę pobrać transakcje, mogę dodać transakcję, mogę usunąć transakcję".
 
-**O architekturze:**
-- *Dlaczego Clean Architecture?* – separacja odpowiedzialności, testowalność (domain nie zależy od Androida), łatwość zmiany np. bazy danych bez dotykania UI
-- *Co daje warstwa domain?* – modele i kontrakty niezależne od frameworka; można testować logikę biznesową bez instrumentacji Androida
-- *Dlaczego MVVM a nie MVC/MVP?* – ViewModel przeżywa rotację ekranu, StateFlow jest reaktywny i naturalne dla Compose
+**Co robi:** Definiuje co każde repozytorium musi umieć, ale **nie jak to robi**. Implementacja jest w `data/repository/`. Dzięki temu ViewModel zależy tylko od interfejsu, nie od konkretnej klasy – można podmienić implementację (np. zamiast Room użyć sieci) bez zmiany ViewModela.
 
-**O Room:**
-- *Co to jest DAO?* – Data Access Object, interfejs opisujący operacje na bazie; Room generuje implementację w czasie kompilacji (stąd KAPT)
-- *Co to jest KAPT?* – Kotlin Annotation Processing Tool; Room czyta adnotacje (@Entity, @Dao, @Database) i generuje kod Java/Kotlin
-- *Dlaczego Flow zamiast LiveData?* – Flow jest częścią Kotlin Coroutines, działa poza Androidem (testowalność), lepiej komponuje się z `combine`/`flatMapLatest`
+---
 
-**O Compose:**
-- *Co to jest rekomposition?* – Compose przerysowuje tylko te fragmenty UI, których dane się zmieniły; stan jest przechowywany jako `State<T>`
-- *Dlaczego `collectAsState()`?* – konwertuje `StateFlow` (coroutines) na `State<T>` (Compose), dzięki czemu zmiana wartości wyzwala rekomposition
-- *Co to jest `remember`?* – przechowuje wartość między rekomposycjami; bez tego stan byłby resetowany przy każdym przerysowaniu
+### presentation/navigation/Navigation.kt
+**Co to jest:** Dwa elementy w jednym pliku:
+1. `Screen` – sealed class z adresami ekranów (jak URL-e w aplikacji webowej)
+2. `AppNavGraph` – cały graf nawigacji + pasek dolny (bottom navigation)
 
-**O bezpieczeństwie/Androidzie:**
-- *Dlaczego FileProvider?* – od Androida 7.0 aplikacje nie mogą udostępniać pliku bezpośrednio przez ścieżkę; FileProvider generuje bezpieczne URI z czasowym uprawnieniem do odczytu
-- *Dlaczego singleton dla bazy danych?* – Room nie jest thread-safe przy tworzeniu; jeden obiekt bazy na cały proces zapobiega konfliktom i jest efektywniejszy
+**Co robi:** `AppNavGraph` to jeden duży Scaffold z NavigationBar na dole i NavHost w środku. NavHost wie, że gdy adres to `"dashboard"` – pokaż `DashboardScreen`, gdy `"transactions"` – pokaż `TransactionListScreen`, itd. `AddEditTransaction` przyjmuje argument `transactionId` – jeśli `-1`, to nowa transakcja; jeśli inne, to edycja.
 
-**O wzorcach:**
-- *Skąd ViewModel wie o zmianach w bazie?* – Room zwraca `Flow`, który emituje nową wartość przy każdej modyfikacji tabeli; ViewModel subskrybuje ten strumień i aktualizuje `StateFlow`
-- *Jak działa combine?* – czeka aż wszystkie wejściowe Flow wyemitują wartość, potem przy każdej zmianie dowolnego z nich wywołuje blok transformacji z najnowszymi wartościami wszystkich
-- *Co to jest suspend function?* – funkcja, która może być wstrzymana (nie blokuje wątku); Room wymaga suspend dla operacji zapisu, żeby nie blokować głównego wątku UI
+---
+
+### presentation/common/FormatUtils.kt
+**Co to jest:** Zbiór funkcji pomocniczych do formatowania.
+
+**Co robi:**
+- `formatAmount(1234.5)` → `"1 234,50 zł"`
+- `formatDate(timestamp)` → `"13.05.2026"`
+- `currentMonth()` → `"2026-05"`
+- `previousMonth("2026-05")` → `"2026-04"`
+- `monthToDisplay("2026-05")` → `"maj 2026"`
+
+---
+
+### presentation/common/XlsxWriter.kt
+**Co to jest:** Generator plików Excel napisany od zera, bez żadnej zewnętrznej biblioteki.
+
+**Co robi:** Format `.xlsx` to ZIP z plikami XML w środku. `XlsxWriter` tworzy ten ZIP ręcznie używając `ZipOutputStream` z Javy. Tworzy plik w katalogu cache aplikacji, a następnie udostępnia go przez `FileProvider` (mechanizm bezpieczeństwa Android) – dzięki temu użytkownik może go otworzyć w Sheets/Excelu.
+
+---
+
+### presentation/dashboard/Dashboard.kt
+**Co to jest:** Ekran główny aplikacji. Zawiera ViewModel i ekran w jednym pliku.
+
+**Co robi:**
+- `DashboardViewModel` – pobiera dane z 3 repozytoriów naraz używając `combine(...)`, oblicza sumę wydatków/przychodów/bilans dla bieżącego miesiąca
+- `DashboardScreen` – wyświetla: kafelki Przychody/Wydatki, bilans miesiąca, pasek postępu budżetu, ostatnie 8 transakcji, przyciski do Budżetu i Oszczędności
+- `SummaryCard`, `BudgetProgressCard` – pomocnicze kompozycje
+
+---
+
+### presentation/transactions/Transactions.kt
+**Co to jest:** Lista transakcji. Zawiera ViewModel, ekran, i wspólne kompozycje używane też przez Dashboard.
+
+**Co robi:**
+- `TransactionListViewModel` – filtruje transakcje po miesiącu, kategorii, typie
+- `TransactionListScreen` – lista z filtrowaniem, możliwość usunięcia transakcji (z potwierdzeniem)
+- `MonthSelector` – strzałki ← / → do przełączania miesięcy (używany też w Statystykach)
+- `TransactionItem` – jeden wiersz transakcji (używany też na Dashboardzie)
+
+---
+
+### presentation/transactions/AddEditTransaction.kt
+**Co to jest:** Formularz dodawania i edycji transakcji.
+
+**Co robi:**
+- `AddEditTransactionViewModel` – ładuje istniejącą transakcję (jeśli edycja), zapisuje nową lub aktualizuje
+- `AddEditTransactionScreen` – formularz z: wyborem typu transakcji, kwotą, kategorią, opisem, datą (DatePickerDialog), wyborem skarbonki (dla SAVE_TO_JAR / WITHDRAW_FROM_JAR)
+
+---
+
+### presentation/statistics/Statistics.kt
+**Co to jest:** Ekran statystyk wydatków.
+
+**Co robi:**
+- `StatisticsViewModel` – grupuje wydatki po kategoriach, oblicza procenty, liczy największą kategorię i średni wydatek
+- `StatisticsScreen` – wyświetla: selektor miesiąca, 4 kafelki ze statystykami, wykres kołowy, listę kategorii z procentami i kwotami, menu eksportu (3 rodzaje pliku xlsx)
+- `SimplePieChart` – wykres kołowy rysowany na `Canvas`
+- `colorFromHex(...)` – parsuje kolor zapisany jako string (#RRGGBB) na obiekt `Color`
+
+---
+
+### presentation/budget/Budget.kt
+**Co to jest:** Ekran planowania budżetu miesięcznego.
+
+**Co robi:**
+- `BudgetViewModel` – łączy kategorie z planami budżetu, oblicza ile z planu już wydano
+- `BudgetScreen` – lista kategorii wydatkowych z polem do wpisania planowanej kwoty, pokazuje ile zostało do planu, opcja skopiowania planu z poprzedniego miesiąca
+- `BudgetRowCard` – jeden wiersz (kategoria + input + pasek postępu)
+
+---
+
+### presentation/savings/Savings.kt
+**Co to jest:** Ekran skarbonka / oszczędności.
+
+**Co robi:**
+- `SavingsViewModel` – CRUD na skarbonkach
+- `SavingsScreen` – lista skarbonka z aktualną kwotą i celem, możliwość dodania/edycji/usunięcia
+- `JarCard` – jeden kafelek skarbonki z paskiem postępu
+- `JarDialog` – dialog do tworzenia/edycji skarbonki
+
+---
+
+### presentation/settings/Settings.kt
+**Co to jest:** Ekran ustawień.
+
+**Co robi:**
+- `SettingsViewModel` – CRUD na kategoriach
+- `SettingsScreen` – przełącznik ciemnego motywu, lista kategorii wydatkowych i przychodowych z możliwością dodania/edycji/usunięcia (domyślne kategorie można tylko edytować, nie usunąć)
+- `CategoryRow` – jeden wiersz kategorii
+- `CategoryDialog` – dialog do tworzenia/edycji kategorii
+
+---
+
+### ui/theme/Theme.kt
+**Co to jest:** Definicja kolorów i typografii całej aplikacji.
+
+**Co robi:** Definiuje dwa schematy kolorów (jasny i ciemny) i podaje je do `MaterialTheme`. Każdy komponent Material 3 (Button, Card, NavigationBar) automatycznie bierze kolory z tego motywu – nie trzeba ręcznie podawać kolorów w każdym miejscu.
+
+---
+
+## Przepływ danych – jak to działa od kliknięcia do ekranu
+
+Przykład: użytkownik dodaje wydatek 50 zł.
+
+```
+1. Użytkownik klika "Zapisz" w AddEditTransactionScreen
+2. Screen wywołuje viewModel.save()
+3. ViewModel wywołuje transactionRepo.insertTransaction(transaction)
+4. Repo konwertuje model → entity i wywołuje dao.insertTransaction(entity)
+5. Room zapisuje wiersz w SQLite
+6. Room automatycznie emituje nową wartość w Flow<List<TransactionEntity>>
+7. DashboardViewModel słucha tego Flow przez combine(...)
+8. combine() oblicza nowy DashboardState (nowa suma wydatków)
+9. _state.update { ... } emituje nowy stan
+10. DashboardScreen robi collectAsState() i Compose przerysowuje ekran
+```
+
+Użytkownik wraca na Dashboard i widzi zaktualizowane liczby – bez ręcznego odświeżania.
+
+---
+
+---
+
+# 20 pytań które może zadać prowadzący + odpowiedzi
+
+---
+
+**1. Co to jest Clean Architecture i dlaczego jej używasz?**
+
+Clean Architecture to podział kodu na warstwy o ściśle określonych odpowiedzialnościach: UI, logika biznesowa, dostęp do danych. Używam jej bo każda warstwa można zmieniać niezależnie – np. można podmienić Room na inną bazę danych bez dotykania ani jednej linii kodu w ekranach. Poza tym logikę domenową można testować bez uruchamiania Androida.
+
+---
+
+**2. Co to jest MVVM i jak jest zaimplementowany w tym projekcie?**
+
+MVVM to wzorzec Model–View–ViewModel. View (ekran Compose) wyświetla dane i przekazuje zdarzenia do ViewModel. ViewModel przetwarza dane i wystawia stan przez `StateFlow`. Model to dane z repozytorium. W projekcie każdy ekran ma swojego ViewModela – np. `DashboardViewModel` zbiera dane z 3 repozytoriów i oblicza `DashboardState`, który `DashboardScreen` obserwuje przez `collectAsState()`.
+
+---
+
+**3. Co to jest Room i jak działa?**
+
+Room to biblioteka ORM (Object-Relational Mapping) od Google, będąca nakładką na SQLite. Piszesz klasy z adnotacjami (`@Entity`, `@Dao`, `@Database`) i Room w czasie kompilacji generuje cały kod obsługi bazy danych. W projekcie mamy 4 encje (tabele) i 4 DAO z metodami do zapytań.
+
+---
+
+**4. Co to jest KAPT i po co jest potrzebny?**
+
+KAPT (Kotlin Annotation Processing Tool) to procesor adnotacji – narzędzie, które podczas budowania projektu czyta adnotacje (`@Entity`, `@Dao`) i **generuje kod źródłowy** implementujący te interfejsy. Bez KAPT Room nie wiedziałby jak zaimplementować DAO. To odpowiednik refleksji, ale wykonywany w czasie kompilacji, nie w czasie wykonania – dlatego jest szybszy i bezpieczniejszy.
+
+---
+
+**5. Co to jest Flow i dlaczego jest używany zamiast LiveData?**
+
+`Flow` to strumień danych z biblioteki Kotlin Coroutines. Emituje kolejne wartości w czasie – Room używa go żeby automatycznie powiadamiać o zmianach w bazie. Wybrałem Flow zamiast LiveData bo: (1) Flow jest częścią czystego Kotlina, nie Androida – można testować bez instrumentacji, (2) Flow ma bogatszy zestaw operatorów (`combine`, `flatMapLatest`, `map`), (3) naturalnie integruje się z coroutines.
+
+---
+
+**6. Co robi operator `combine` i gdzie go używasz?**
+
+`combine(flow1, flow2, flow3) { a, b, c -> ... }` czeka aż każdy z wejściowych Flow wyemituje co najmniej jedną wartość, potem za każdym razem gdy którykolwiek się zmieni – wywołuje blok transformacji z najnowszymi wartościami wszystkich. W `DashboardViewModel` kombinuję transakcje, kategorie i plany budżetu: gdy użytkownik doda nową transakcję, Room emituje nową listę transakcji, `combine` wywołuje blok, obliczam nowy `DashboardState` i Dashboard się aktualizuje.
+
+---
+
+**7. Co to jest StateFlow i jak różni się od zwykłego Flow?**
+
+`StateFlow` to specjalny Flow który zawsze ma wartość (nie może być pusty), przechowuje ostatnią wyemitowaną wartość (hot stream), i każdy nowy kolektor od razu dostaje tę wartość. W przeciwieństwie do zwykłego `Flow` (cold stream), który wykonuje się od nowa dla każdego kolektora. W ViewModelach trzymam `MutableStateFlow<UiState>` i wystawiam go jako `StateFlow` – ekran dostaje zawsze aktualny stan, nawet jeśli zasubskrybował po fakcie.
+
+---
+
+**8. Co to jest Jetpack Compose i czym różni się od XML?**
+
+Jetpack Compose to deklaratywne UI. Zamiast opisywać widoki w XML i ręcznie aktualizować je w kodzie (imperatywne), piszesz funkcje Kotlin z adnotacją `@Composable` które opisują jak UI ma wyglądać dla danego stanu. Gdy stan się zmienia, Compose automatycznie przerysowuje tylko te elementy które zmieniły swój wygląd (rekomposition). Jest to podobne do React.js w świecie web.
+
+---
+
+**9. Co to jest rekomposition?**
+
+Rekomposition to mechanizm w Compose gdzie funkcja kompozycyjna jest wywoływana ponownie gdy zmienią się dane od których zależy. Compose jest na tyle inteligentny, że przerysowuje tylko te fragmenty UI które naprawdę muszą się zmienić – nie cały ekran. Żeby rekomposition działała, stan musi być przechowywany jako `State<T>` (np. przez `remember { mutableStateOf(...) }` lub `collectAsState()`).
+
+---
+
+**10. Po co `remember` i `mutableStateOf`?**
+
+Bez `remember` stan byłby resetowany przy każdym wywołaniu funkcji kompozycyjnej (każdej rekomposition). `remember` mówi Compose żeby zapamiętał wartość między kolejnymi wywołaniami. `mutableStateOf` tworzy obserwowalny stan – zmiana jego wartości wyzwala rekomposition komponentów które go czytają. Przykład: `var showDialog by remember { mutableStateOf(false) }` – dialog jest zamknięty, po kliknięciu przycisku `showDialog = true`, Compose to widzi i przerysowuje ekran z otwartym dialogiem.
+
+---
+
+**11. Co to jest ViewModel i dlaczego przeżywa rotację ekranu?**
+
+ViewModel to klasa przeznaczona do przechowywania i przetwarzania danych ekranu. Android trzyma go w specjalnym miejscu w pamięci powiązanym z "cyklem życia ekranu", nie Activity. Gdy obrócisz telefon, Activity jest niszczona i tworzona na nowo, ale ViewModel przeżywa – dzięki temu nie tracimy danych i nie robimy ponownych zapytań do bazy.
+
+---
+
+**12. Jak działa Dependency Injection w projekcie (bez Hilt)?**
+
+Zamiast Hilt używam ręcznego DI przez `AppContainer`. `BudgetApp` (Application class) tworzy `AppContainer` który buduje bazę danych i repozytoria. Każdy ekran dostaje dostęp do kontenera przez `LocalContext.current.applicationContext as BudgetApp` i wywołuje `app.container`. ViewModel jest tworzony przez `ViewModelProvider.Factory` który dostaje repozytorium z kontenera. To prostsze niż Hilt, ale działa tak samo koncepcyjnie.
+
+---
+
+**13. Co to jest FileProvider i dlaczego jest potrzebny do eksportu Excel?**
+
+Od Android 7.0 aplikacje nie mogą udostępniać pliku bezpośrednio przez ścieżkę w systemie plików – byłoby to zagrożenie bezpieczeństwa. FileProvider generuje tymczasowe `content://` URI z ograniczonym uprawnieniem do odczytu. Aplikacja docelowa (np. Gmail, Sheets) dostaje uprawnienie tylko do tego konkretnego pliku i tylko na czas aktywności `Intent.ACTION_SEND`. Bez FileProvider dostalibyśmy `FileUriExposedException`.
+
+---
+
+**14. Dlaczego baza danych jest singletonem?**
+
+SQLite nie obsługuje wielu równoczesnych połączeń do zapisu bez ryzyka uszkodzenia bazy. Room wymaga żeby `RoomDatabase` był jeden na cały proces – tworzymy go przez `Room.databaseBuilder(...).build()` opakowany w `companion object` z `@Volatile`. Gdyby było wiele instancji, mogłyby powstać konflikty przy równoczesnym zapisie z różnych coroutines.
+
+---
+
+**15. Jak działa nawigacja w aplikacji?**
+
+Używam Navigation Compose. `NavHost` zawiera graf wszystkich ekranów. Każdy ekran ma swój "adres" (route) zdefiniowany w sealed class `Screen`. Przejście do ekranu to `navController.navigate(Screen.AddEditTransaction.createRoute(id))`. Ekrany z dolnego paska (`popUpTo` + `launchSingleTop`) nie są duplikowane na stosie nawigacyjnym – kliknięcie Dashboardu gdy już jesteśmy na Dashboardzie nie dodaje kolejnej kopii.
+
+---
+
+**16. Co to jest suspend function i po co jest w projekcie?**
+
+`suspend` to słowo kluczowe Kotlina oznaczające funkcję która może być wstrzymana bez blokowania wątku. Room wymaga `suspend` dla operacji zapisu (`insertTransaction`, `deleteTransaction`) – dzięki temu nie blokujemy głównego wątku UI (co spowodowałoby crash lub zawieszenie aplikacji). Funkcje suspend można wywoływać tylko z coroutine lub innej funkcji suspend – w ViewModelach używamy `viewModelScope.launch { ... }`.
+
+---
+
+**17. Co to jest `viewModelScope`?**
+
+To coroutine scope powiązany z cyklem życia ViewModel. Gdy ViewModel jest niszczony (np. użytkownik wychodzi z ekranu), `viewModelScope` automatycznie anuluje wszystkie uruchomione w nim coroutines – nie musimy ręcznie zarządzać anulowaniem i nie ma wycieków pamięci.
+
+---
+
+**18. Dlaczego enum `TransactionType` jest zapisywany w bazie jako String?**
+
+Room nie obsługuje natywnie enumów Kotlina. Można użyć `@TypeConverter` albo zapisać `name` enuma jako tekst (np. `"EXPENSE"`). Wybrałem prostsze podejście: w Entity kolumna `type` to `String`, przy odczycie robimy `TransactionType.valueOf(type)`. Alternatywą byłby `TypeConverter` zdefiniowany w bazie danych.
+
+---
+
+**19. Co to jest `flatMapLatest` i gdzie go używasz?**
+
+`flatMapLatest` to operator Flow, który dla każdej nowej wartości ze strumienia wejściowego uruchamia nowy strumień wewnętrzny i **anuluje poprzedni**. W `TransactionListViewModel`:
+```kotlin
+_filter.flatMapLatest { f -> transactionRepo.getTransactionsByMonth(f.month) }
+```
+Gdy użytkownik zmieni miesiąc (`_filter` emituje nowy filtr), poprzednia obserwacja bazy dla starego miesiąca jest anulowana i zaczyna się nowa dla nowego miesiąca. Bez `flatMapLatest` moglibyśmy dostać dane z wielu miesięcy naraz.
+
+---
+
+**20. Jak działa wykres kołowy i co to jest Canvas?**
+
+`Canvas` to kompozycja Compose dająca dostęp do API rysowania (DrawScope). W `SimplePieChart` iteruję po segmentach i dla każdego rysuję wycinek koła (`drawArc`) o kącie proporcjonalnym do wartości (`wartość / suma * 360°`). Zaczynamy od -90° (góra) i dokładamy kolejne segmenty. Jest to rysowanie niskopoziomowe – bezpośrednio na "płótnie" piksele po pikselu, bez żadnej biblioteki do wykresów.

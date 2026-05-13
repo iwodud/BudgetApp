@@ -1,10 +1,34 @@
 package com.example.budgetapp.data.local
 
+import android.content.Context
+import androidx.room.*
+import com.example.budgetapp.data.local.dao.*
 import com.example.budgetapp.data.local.entity.*
 import java.util.Calendar
 
-object DatabaseSeeder {
+@Database(
+    entities = [TransactionEntity::class, CategoryEntity::class, BudgetPlanEntity::class, SavingsJarEntity::class],
+    version = 1,
+    exportSchema = false
+)
+abstract class AppDatabase : RoomDatabase() {
+    abstract fun transactionDao(): TransactionDao
+    abstract fun categoryDao(): CategoryDao
+    abstract fun budgetPlanDao(): BudgetPlanDao
+    abstract fun savingsJarDao(): SavingsJarDao
 
+    companion object {
+        @Volatile private var INSTANCE: AppDatabase? = null
+        fun getDatabase(context: Context): AppDatabase {
+            return INSTANCE ?: synchronized(this) {
+                Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "budget_database")
+                    .build().also { INSTANCE = it }
+            }
+        }
+    }
+}
+
+object DatabaseSeeder {
     suspend fun seed(db: AppDatabase) {
         val categoryDao = db.categoryDao()
         val transactionDao = db.transactionDao()
@@ -28,7 +52,6 @@ object DatabaseSeeder {
 
         val expenseIds = categoryDao.insertAll(expenseCategories)
         val incomeIds = categoryDao.insertAll(incomeCategories)
-
         val catMap = buildMap {
             expenseCategories.zip(expenseIds).forEach { (cat, id) -> put(cat.name, id) }
             incomeCategories.zip(incomeIds).forEach { (cat, id) -> put(cat.name, id) }
@@ -44,7 +67,7 @@ object DatabaseSeeder {
         val jar1Id = savingsJarDao.insert(SavingsJarEntity(name = "Wakacje", currentAmount = 0.0, goalAmount = 3000.0))
         val jar2Id = savingsJarDao.insert(SavingsJarEntity(name = "Fundusz awaryjny", currentAmount = 0.0, goalAmount = 5000.0))
 
-        val transactions = listOf(
+        transactionDao.insertAll(listOf(
             TransactionEntity(type = "INCOME", amount = 4500.0, categoryId = catMap["Wynagrodzenie"], description = "Pensja - poprzedni miesiąc", date = daysAgo(35), createdAt = daysAgo(35)),
             TransactionEntity(type = "EXPENSE", amount = 280.0, categoryId = catMap["Jedzenie"], description = "Zakupy spożywcze", date = daysAgo(33), createdAt = daysAgo(33)),
             TransactionEntity(type = "EXPENSE", amount = 150.0, categoryId = catMap["Transport"], description = "Bilet miesięczny", date = daysAgo(31), createdAt = daysAgo(31)),
@@ -61,28 +84,20 @@ object DatabaseSeeder {
             TransactionEntity(type = "EXPENSE", amount = 48.0, categoryId = catMap["Transport"], description = "Paliwo", date = daysAgo(2), createdAt = daysAgo(2)),
             TransactionEntity(type = "EXPENSE", amount = 90.0, categoryId = catMap["Zdrowie"], description = "Lekarz", date = daysAgo(1), createdAt = daysAgo(1)),
             TransactionEntity(type = "SAVE_TO_JAR", amount = 300.0, savingsJarId = jar1Id, description = "Dokładam na wakacje", date = daysAgo(1), createdAt = daysAgo(1))
-        )
-        transactionDao.insertAll(transactions)
+        ))
 
         savingsJarDao.addToAmount(jar1Id, 800.0)
         savingsJarDao.addToAmount(jar2Id, 700.0)
 
-        val currentMonth = currentMonthString()
-        val budgetPlans = listOf(
+        val c = Calendar.getInstance()
+        val currentMonth = "${c.get(Calendar.YEAR)}-${(c.get(Calendar.MONTH) + 1).toString().padStart(2, '0')}"
+        budgetPlanDao.insertAll(listOf(
             BudgetPlanEntity(categoryId = catMap["Jedzenie"]!!, month = currentMonth, plannedAmount = 600.0),
             BudgetPlanEntity(categoryId = catMap["Transport"]!!, month = currentMonth, plannedAmount = 200.0),
             BudgetPlanEntity(categoryId = catMap["Zakupy"]!!, month = currentMonth, plannedAmount = 300.0),
             BudgetPlanEntity(categoryId = catMap["Rozrywka"]!!, month = currentMonth, plannedAmount = 150.0),
             BudgetPlanEntity(categoryId = catMap["Rachunki"]!!, month = currentMonth, plannedAmount = 1500.0),
             BudgetPlanEntity(categoryId = catMap["Zdrowie"]!!, month = currentMonth, plannedAmount = 150.0)
-        )
-        budgetPlanDao.insertAll(budgetPlans)
-    }
-
-    private fun currentMonthString(): String {
-        val cal = Calendar.getInstance()
-        val year = cal.get(Calendar.YEAR)
-        val month = cal.get(Calendar.MONTH) + 1
-        return "$year-${month.toString().padStart(2, '0')}"
+        ))
     }
 }
