@@ -19,13 +19,16 @@ Aplikacja Android do zarządzania budżetem osobistym. Działa w 100% offline �
 Projekt stosuje **Clean Architecture** – to po prostu podział kodu na 3 osobne "piętry":
 
 ```
-┌──────────────────────────────────────┐
-│  PRESENTATION – to co widzi użytkownik  │  ekrany, ViewModele
-├──────────────────────────────────────┤
-│  DOMAIN – logika biznesowa            │  modele danych, kontrakty
-├──────────────────────────────────────┤
-│  DATA – skąd bierzemy dane            │  baza danych Room, repozytoria
-└──────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│            PRESENTATION                 │
+│    ekrany Compose + ViewModele          │
+├─────────────────────────────────────────┤
+│               DOMAIN                    │
+│   modele danych + kontrakty repo        │
+├─────────────────────────────────────────┤
+│                DATA                     │
+│    Room + implementacje repo            │
+└─────────────────────────────────────────┘
 ```
 
 **Zasada:** każde piętro rozmawia tylko z piętrem poniżej. UI nie wie jak działa baza danych – wie tylko, że może poprosić repozytorium o dane.
@@ -34,6 +37,57 @@ Wzorzec: **MVVM** (Model–View–ViewModel)
 - **View** = ekrany Compose (to co widać)
 - **ViewModel** = logika ekranu, trzyma stan
 - **Model** = dane z repozytoriów
+
+---
+
+## Struktura projektu – 20 plików Kotlin
+
+```
+com.example.budgetapp/
+│
+├── MainActivity.kt              ← jedyna Activity, punkt startowy UI
+├── BudgetApp.kt                 ← Application class, zyje przez caly proces
+├── AppContainer.kt              ← reczny Dependency Injection
+│
+├── data/
+│   ├── local/
+│   │   ├── Database.kt          ← definicja bazy Room + seeder kategorii
+│   │   ├── dao/
+│   │   │   └── Daos.kt          ← 4 interfejsy DAO (zapytania SQL)
+│   │   └── entity/
+│   │       └── Entities.kt      ← 4 klasy mapowane na tabele SQLite
+│   └── repository/
+│       └── Repositories.kt      ← 4 implementacje repozytoriow
+│
+├── domain/
+│   ├── model/
+│   │   └── Models.kt            ← czyste modele + enums (bez Androida)
+│   └── repository/
+│       └── Repositories.kt      ← 4 interfejsy repozytoriow (kontrakty)
+│
+├── presentation/
+│   ├── navigation/
+│   │   └── Navigation.kt        ← Screen routes + NavGraph + BottomBar
+│   ├── common/
+│   │   ├── FormatUtils.kt       ← formatowanie kwot, dat, miesiecy
+│   │   └── XlsxWriter.kt        ← generator plikow Excel (.xlsx)
+│   ├── dashboard/
+│   │   └── Dashboard.kt         ← ekran glowny + ViewModel
+│   ├── transactions/
+│   │   ├── Transactions.kt      ← lista transakcji + ViewModel
+│   │   └── AddEditTransaction.kt← formularz dodawania/edycji + ViewModel
+│   ├── statistics/
+│   │   └── Statistics.kt        ← statystyki + wykres kolowy + ViewModel
+│   ├── budget/
+│   │   └── Budget.kt            ← plan budzetu + ViewModel
+│   ├── savings/
+│   │   └── Savings.kt           ← skarbonki + ViewModel
+│   └── settings/
+│       └── Settings.kt          ← ustawienia + kategorie + ViewModel
+│
+└── ui/theme/
+    └── Theme.kt                 ← kolory (jasny/ciemny) + typografia
+```
 
 ---
 
