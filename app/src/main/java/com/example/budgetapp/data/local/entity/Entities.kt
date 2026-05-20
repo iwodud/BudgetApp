@@ -82,3 +82,22 @@ fun SavingsJar.toEntity() = SavingsJarEntity(
     id = id, name = name, currentAmount = currentAmount,
     goalAmount = goalAmount, createdAt = createdAt
 )
+
+@Entity(tableName = "savings_jar_budget_plans")
+data class SavingsJarBudgetPlanEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "savings_jar_id") val savingsJarId: Long,
+    val month: String,
+    @ColumnInfo(name = "planned_save_amount") val plannedSaveAmount: Double = 0.0,
+    @ColumnInfo(name = "planned_withdraw_amount") val plannedWithdrawAmount: Double = 0.0
+)
+
+fun SavingsJarBudgetPlanEntity.toDomain() = SavingsJarBudgetPlan(
+    id = id, savingsJarId = savingsJarId, month = month,
+    plannedSaveAmount = plannedSaveAmount, plannedWithdrawAmount = plannedWithdrawAmount
+)
+
+fun SavingsJarBudgetPlan.toEntity() = SavingsJarBudgetPlanEntity(
+    id = id, savingsJarId = savingsJarId, month = month,
+    plannedSaveAmount = plannedSaveAmount, plannedWithdrawAmount = plannedWithdrawAmount
+)

@@ -11,6 +11,7 @@ interface AppContainer {
     val categoryRepository: CategoryRepository
     val budgetPlanRepository: BudgetPlanRepository
     val savingsJarRepository: SavingsJarRepository
+    val savingsJarBudgetPlanRepository: SavingsJarBudgetPlanRepository
 }
 
 class AppContainerImpl(context: Context) : AppContainer {
@@ -19,4 +20,5 @@ class AppContainerImpl(context: Context) : AppContainer {
     override val categoryRepository: CategoryRepository = CategoryRepositoryImpl(database.categoryDao())
     override val budgetPlanRepository: BudgetPlanRepository = BudgetPlanRepositoryImpl(database.budgetPlanDao())
     override val savingsJarRepository: SavingsJarRepository = SavingsJarRepositoryImpl(database.savingsJarDao())
+    override val savingsJarBudgetPlanRepository: SavingsJarBudgetPlanRepository = SavingsJarBudgetPlanRepositoryImpl(database.savingsJarBudgetPlanDao())
 }

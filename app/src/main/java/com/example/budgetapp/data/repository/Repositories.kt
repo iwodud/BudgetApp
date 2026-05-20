@@ -34,9 +34,26 @@ class BudgetPlanRepositoryImpl(private val dao: BudgetPlanDao) : BudgetPlanRepos
     override suspend fun updateBudgetPlan(budgetPlan: BudgetPlan) = dao.update(budgetPlan.toEntity())
     override suspend fun deleteBudgetPlan(budgetPlan: BudgetPlan) = dao.delete(budgetPlan.toEntity())
     override suspend fun deleteAllForMonth(month: String) = dao.deleteAllForMonth(month)
+    override suspend fun deleteForCategories(month: String, categoryIds: List<Long>) = dao.deleteForCategories(month, categoryIds)
     override suspend fun copyFromPreviousMonth(fromMonth: String, toMonth: String) {
         val previous = dao.getBudgetPlansByMonthOnce(fromMonth)
         dao.insertAll(previous.map { BudgetPlanEntity(categoryId = it.categoryId, month = toMonth, plannedAmount = it.plannedAmount) })
+    }
+    override suspend fun copyForCategories(fromMonth: String, toMonth: String, categoryIds: List<Long>) {
+        val previous = dao.getBudgetPlansByMonthOnce(fromMonth).filter { it.categoryId in categoryIds }
+        dao.insertAll(previous.map { BudgetPlanEntity(categoryId = it.categoryId, month = toMonth, plannedAmount = it.plannedAmount) })
+    }
+}
+
+class SavingsJarBudgetPlanRepositoryImpl(private val dao: SavingsJarBudgetPlanDao) : SavingsJarBudgetPlanRepository {
+    override fun getPlansByMonth(month: String): Flow<List<SavingsJarBudgetPlan>> = dao.getPlansByMonth(month).map { it.map { e -> e.toDomain() } }
+    override suspend fun getPlan(jarId: Long, month: String): SavingsJarBudgetPlan? = dao.getPlan(jarId, month)?.toDomain()
+    override suspend fun insertPlan(plan: SavingsJarBudgetPlan): Long = dao.insert(plan.toEntity())
+    override suspend fun updatePlan(plan: SavingsJarBudgetPlan) = dao.update(plan.toEntity())
+    override suspend fun deleteAllForMonth(month: String) = dao.deleteAllForMonth(month)
+    override suspend fun copyFromPreviousMonth(fromMonth: String, toMonth: String) {
+        val previous = dao.getPlansByMonthOnce(fromMonth)
+        dao.insertAll(previous.map { SavingsJarBudgetPlanEntity(savingsJarId = it.savingsJarId, month = toMonth, plannedSaveAmount = it.plannedSaveAmount, plannedWithdrawAmount = it.plannedWithdrawAmount) })
     }
 }
 

@@ -45,3 +45,11 @@ data class SavingsJar(
     val goalAmount: Double? = null,
     val createdAt: Long = System.currentTimeMillis()
 )
+
+data class SavingsJarBudgetPlan(
+    val id: Long = 0,
+    val savingsJarId: Long,
+    val month: String,
+    val plannedSaveAmount: Double = 0.0,
+    val plannedWithdrawAmount: Double = 0.0
+)

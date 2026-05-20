@@ -68,6 +68,29 @@ interface BudgetPlanDao {
 
     @Query("DELETE FROM budget_plans WHERE month = :month")
     suspend fun deleteAllForMonth(month: String)
+
+    @Query("DELETE FROM budget_plans WHERE month = :month AND category_id IN (:categoryIds)")
+    suspend fun deleteForCategories(month: String, categoryIds: List<Long>)
+}
+
+@Dao
+interface SavingsJarBudgetPlanDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insert(plan: SavingsJarBudgetPlanEntity): Long
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insertAll(plans: List<SavingsJarBudgetPlanEntity>)
+    @Update suspend fun update(plan: SavingsJarBudgetPlanEntity)
+    @Delete suspend fun delete(plan: SavingsJarBudgetPlanEntity)
+
+    @Query("SELECT * FROM savings_jar_budget_plans WHERE month = :month")
+    fun getPlansByMonth(month: String): Flow<List<SavingsJarBudgetPlanEntity>>
+
+    @Query("SELECT * FROM savings_jar_budget_plans WHERE month = :month")
+    suspend fun getPlansByMonthOnce(month: String): List<SavingsJarBudgetPlanEntity>
+
+    @Query("SELECT * FROM savings_jar_budget_plans WHERE savings_jar_id = :jarId AND month = :month LIMIT 1")
+    suspend fun getPlan(jarId: Long, month: String): SavingsJarBudgetPlanEntity?
+
+    @Query("DELETE FROM savings_jar_budget_plans WHERE month = :month")
+    suspend fun deleteAllForMonth(month: String)
 }
 
 @Dao

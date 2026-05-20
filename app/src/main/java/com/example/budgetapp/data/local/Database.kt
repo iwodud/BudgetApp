@@ -2,13 +2,29 @@ package com.example.budgetapp.data.local
 
 import android.content.Context
 import androidx.room.*
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.budgetapp.data.local.dao.*
 import com.example.budgetapp.data.local.entity.*
 import java.util.Calendar
 
+val MIGRATION_1_2 = object : Migration(1, 2) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL(
+            """CREATE TABLE IF NOT EXISTS savings_jar_budget_plans (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                savings_jar_id INTEGER NOT NULL,
+                month TEXT NOT NULL,
+                planned_save_amount REAL NOT NULL DEFAULT 0.0,
+                planned_withdraw_amount REAL NOT NULL DEFAULT 0.0
+            )"""
+        )
+    }
+}
+
 @Database(
-    entities = [TransactionEntity::class, CategoryEntity::class, BudgetPlanEntity::class, SavingsJarEntity::class],
-    version = 1,
+    entities = [TransactionEntity::class, CategoryEntity::class, BudgetPlanEntity::class, SavingsJarEntity::class, SavingsJarBudgetPlanEntity::class],
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -16,12 +32,14 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun categoryDao(): CategoryDao
     abstract fun budgetPlanDao(): BudgetPlanDao
     abstract fun savingsJarDao(): SavingsJarDao
+    abstract fun savingsJarBudgetPlanDao(): SavingsJarBudgetPlanDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "budget_database")
+                    .addMigrations(MIGRATION_1_2)
                     .build().also { INSTANCE = it }
             }
         }

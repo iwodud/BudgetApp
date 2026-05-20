@@ -24,6 +24,7 @@ import com.example.budgetapp.AppContainer
 import com.example.budgetapp.BudgetApp
 import com.example.budgetapp.domain.model.BudgetPlan
 import com.example.budgetapp.domain.model.Category
+import com.example.budgetapp.domain.model.CategoryType
 import com.example.budgetapp.domain.model.Transaction
 import com.example.budgetapp.domain.model.TransactionType
 import com.example.budgetapp.domain.repository.BudgetPlanRepository
@@ -65,6 +66,7 @@ class DashboardViewModel(
             ) { transactions, categories, plans ->
                 val expenses = transactions.filter { it.type == TransactionType.EXPENSE }
                 val incomes = transactions.filter { it.type == TransactionType.INCOME }
+                val expenseCategoryIds = categories.filter { it.type == CategoryType.EXPENSE }.map { it.id }.toSet()
                 _state.update { it.copy(
                     currentMonth = month,
                     totalIncome = incomes.sumOf { t -> t.amount },
@@ -73,7 +75,7 @@ class DashboardViewModel(
                     recentTransactions = transactions.take(8),
                     categories = categories,
                     budgetPlans = plans,
-                    totalPlanned = plans.sumOf { p -> p.plannedAmount },
+                    totalPlanned = plans.filter { it.categoryId in expenseCategoryIds }.sumOf { p -> p.plannedAmount },
                     totalSpent = expenses.sumOf { t -> t.amount }
                 )}
             }.collect()

@@ -13,10 +13,10 @@ Prosta, nowoczesna aplikacja Android do zarządzania osobistymi finansami. Dzia�
 | Kotlin | Język programowania |
 | Jetpack Compose | UI |
 | Navigation Compose | Nawigacja |
-| Room Database | Lokalna baza danych |
+| Room Database + KAPT | Lokalna baza danych |
 | ViewModel + StateFlow | Zarządzanie stanem |
-| MPAndroidChart lub Compose Charts | Wykresy |
-| Apache POI | Export do pliku Excel (.xlsx) |
+| Canvas (Compose) | Wykresy (własna implementacja) |
+| XlsxWriter (własna impl.) | Export do pliku Excel (.xlsx) bez zewnętrznych bibliotek |
 | Material 3 | Design system |
 
 ---
@@ -127,7 +127,7 @@ Użytkownik może:
 
 ### 9. Export do Excela
 
-Trzy niezależne eksporty:
+Trzy niezależne eksporty (format `.xlsx`, własna implementacja bez Apache POI):
 
 **Export 1 — Historia transakcji (miesięczna):**
 Wybór miesiąca. Zawiera tylko wydatki, posortowane chronologicznie.
@@ -142,7 +142,7 @@ Wybór miesiąca. Wydatki zagregowane per kategoria.
 Wybór roku. Zestawienie wydatków per kategoria z podziałem na miesiące.
 | Kategoria | Styczeń | Luty | ... | Grudzień | Razem |
 
-Format: `.xlsx`. Plik udostępniany przez system share sheet (możliwość zapisu, wysyłki itp.).
+Plik udostępniany przez system share sheet (możliwość zapisu, wysyłki itp.).
 
 ### 10. Ustawienia
 
@@ -195,33 +195,44 @@ Osobne ekrany (push):
 
 ## Architektura — Clean Architecture
 
+Pliki scalone per warstwa (ok. 20 plików `.kt`):
+
 ```
 app/
+├── BudgetApp.kt                          (Application class, DI bootstrap, seeding)
+├── AppContainer.kt                       (manual DI — interfejs + implementacja)
+├── MainActivity.kt
 ├── data/
 │   ├── local/
-│   │   ├── dao/           (TransactionDao, CategoryDao, BudgetPlanDao, SavingsDao)
-│   │   ├── entity/        (TransactionEntity, CategoryEntity, BudgetPlanEntity, SavingsJarEntity)
-│   │   └── AppDatabase.kt
-│   └── repository/        (implementacje repozytoriów)
+│   │   ├── dao/Daos.kt                  (TransactionDao, CategoryDao, BudgetPlanDao, SavingsJarDao)
+│   │   ├── entity/Entities.kt           (wszystkie encje Room + mappery toDomain/toEntity)
+│   │   └── Database.kt                  (AppDatabase + DatabaseSeeder)
+│   └── repository/Repositories.kt       (implementacje wszystkich repozytoriów)
 ├── domain/
-│   ├── model/             (Transaction, Category, BudgetPlan, SavingsJar)
-│   ├── repository/        (interfejsy repozytoriów)
-│   └── usecase/           (GetTransactionsUseCase, AddTransactionUseCase, itp.)
+│   ├── model/Models.kt                  (modele domenowe + enumeracje)
+│   └── repository/Repositories.kt       (interfejsy repozytoriów)
 └── presentation/
-    ├── dashboard/
+    ├── navigation/Navigation.kt          (NavGraph, Screen, BottomNav)
+    ├── common/
+    │   ├── FormatUtils.kt
+    │   └── XlsxWriter.kt
+    ├── dashboard/Dashboard.kt
     ├── transactions/
-    ├── statistics/
-    ├── budget/
-    ├── savings/
-    ├── settings/
-    └── common/            (reużywalne komponenty Compose)
+    │   ├── Transactions.kt              (lista + ViewModel + komponenty)
+    │   └── AddEditTransaction.kt
+    ├── budget/Budget.kt
+    ├── statistics/Statistics.kt
+    ├── savings/Savings.kt
+    ├── settings/Settings.kt
+    └── ui/theme/Theme.kt
 ```
 
 ### Wzorce:
-- **MVVM** — ViewModel + StateFlow + Sealed classes dla UI state
+- **MVVM** — ViewModel + StateFlow dla UI state
 - **Repository pattern** — odizolowanie źródła danych
-- **Use cases** — logika biznesowa poza ViewModelem
+- **Manual DI** — `AppContainer` w klasie `Application`, bez Hilt
 - Coroutines + Flow do operacji asynchronicznych
+- Use cases — możliwy kolejny krok refaktoryzacji gdy logika biznesowa urośnie
 
 ---
 
@@ -252,11 +263,6 @@ id, categoryId, month (YYYY-MM), plannedAmount
 id, name, currentAmount, goalAmount?, createdAt
 ```
 
-**SettingsEntity**
-```
-key, value
-```
-
 ### Migracje:
 Przygotowane od wersji 1 z możliwością dodania kolejnych migracji.
 
@@ -265,12 +271,9 @@ Przygotowane od wersji 1 z możliwością dodania kolejnych migracji.
 ## Jakość kodu
 
 - Zgodność z zasadami SOLID
-- Sealed classes dla stanów UI (`Loading`, `Success`, `Error`, `Empty`)
 - Reużywalne komponenty Compose
-- Preview dla każdego composable
 - Obsługa rotacji ekranu (ViewModel survives config changes)
 - Error handling z komunikatami dla użytkownika
-- Kod komentowany tam, gdzie logika jest nieoczywista
 
 ---
 

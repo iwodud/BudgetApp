@@ -30,6 +30,17 @@ interface BudgetPlanRepository {
     suspend fun updateBudgetPlan(budgetPlan: BudgetPlan)
     suspend fun deleteBudgetPlan(budgetPlan: BudgetPlan)
     suspend fun deleteAllForMonth(month: String)
+    suspend fun deleteForCategories(month: String, categoryIds: List<Long>)
+    suspend fun copyFromPreviousMonth(fromMonth: String, toMonth: String)
+    suspend fun copyForCategories(fromMonth: String, toMonth: String, categoryIds: List<Long>)
+}
+
+interface SavingsJarBudgetPlanRepository {
+    fun getPlansByMonth(month: String): Flow<List<SavingsJarBudgetPlan>>
+    suspend fun getPlan(jarId: Long, month: String): SavingsJarBudgetPlan?
+    suspend fun insertPlan(plan: SavingsJarBudgetPlan): Long
+    suspend fun updatePlan(plan: SavingsJarBudgetPlan)
+    suspend fun deleteAllForMonth(month: String)
     suspend fun copyFromPreviousMonth(fromMonth: String, toMonth: String)
 }
 
