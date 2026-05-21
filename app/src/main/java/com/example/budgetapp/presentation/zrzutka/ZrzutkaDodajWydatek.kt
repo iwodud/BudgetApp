@@ -58,15 +58,17 @@ fun ZrzutkaDodajWydatekScreen(navController: NavController) {
 
     var description by remember { mutableStateOf("") }
     var amountText by remember { mutableStateOf("") }
-    var payerId by remember { mutableStateOf(ZRZUTKA_SELF_ID) }
-    var participants by remember { mutableStateOf(setOf(ZRZUTKA_SELF_ID)) }
+    var payerId by remember { mutableStateOf<Long?>(null) }
+    var participants by remember { mutableStateOf(setOf<Long>()) }
     var equalSplit by remember { mutableStateOf(true) }
     var manualAmounts by remember { mutableStateOf(mapOf<Long, String>()) }
 
     LaunchedEffect(state.persons) {
-        val allIds = setOf(ZRZUTKA_SELF_ID) + state.persons.map { it.id }.toSet()
-        participants = allIds
-        manualAmounts = allIds.associateWith { "" }
+        if (state.persons.isNotEmpty()) {
+            if (payerId == null) payerId = state.persons.first().id
+            participants = state.persons.map { it.id }.toSet()
+            manualAmounts = state.persons.associate { it.id to "" }
+        }
     }
 
     LaunchedEffect(state.saved) { if (state.saved) navController.navigateUp() }
@@ -74,12 +76,11 @@ fun ZrzutkaDodajWydatekScreen(navController: NavController) {
     val totalAmount = amountText.replace(",", ".").toDoubleOrNull() ?: 0.0
     val participantList = participants.toList()
     val equalShare = if (participantList.isNotEmpty()) totalAmount / participantList.size else 0.0
-
-    fun personName(id: Long) = if (id == ZRZUTKA_SELF_ID) ZRZUTKA_SELF_NAME else state.persons.find { it.id == id }?.name ?: "?"
+    fun personName(id: Long) = state.persons.find { it.id == id }?.name ?: "?"
 
     val manualSum = manualAmounts.filter { participants.contains(it.key) }.values.sumOf { it.replace(",", ".").toDoubleOrNull() ?: 0.0 }
     val manualValid = !equalSplit && kotlin.math.abs(manualSum - totalAmount) <= 0.01
-    val canSave = description.isNotBlank() && totalAmount > 0 && participants.isNotEmpty() && (equalSplit || manualValid)
+    val canSave = description.isNotBlank() && totalAmount > 0 && participants.isNotEmpty() && payerId != null && (equalSplit || manualValid)
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),
@@ -90,6 +91,13 @@ fun ZrzutkaDodajWydatekScreen(navController: NavController) {
             )
         }
     ) { padding ->
+        if (state.persons.isEmpty()) {
+            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                Text("Najpierw dodaj osoby w zakładce Zrzutka", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            return@Scaffold
+        }
+
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(16.dp),
@@ -98,7 +106,6 @@ fun ZrzutkaDodajWydatekScreen(navController: NavController) {
             item {
                 OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Opis") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             }
-
             item {
                 OutlinedTextField(
                     value = amountText, onValueChange = { amountText = it },
@@ -106,40 +113,34 @@ fun ZrzutkaDodajWydatekScreen(navController: NavController) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true
                 )
             }
-
             item {
                 Text("Kto zapłacił", style = MaterialTheme.typography.labelLarge)
                 Spacer(Modifier.height(8.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val allPayers = listOf(ZRZUTKA_SELF_ID) + state.persons.map { it.id }
-                    allPayers.forEach { id ->
-                        FilterChip(selected = payerId == id, onClick = { payerId = id }, label = { Text(personName(id)) })
+                    state.persons.forEach { person ->
+                        FilterChip(selected = payerId == person.id, onClick = { payerId = person.id }, label = { Text(person.name) })
                     }
                 }
             }
-
             item {
                 Text("Uczestnicy", style = MaterialTheme.typography.labelLarge)
                 Spacer(Modifier.height(4.dp))
-                val allIds = listOf(ZRZUTKA_SELF_ID) + state.persons.map { it.id }
-                allIds.forEach { id ->
+                state.persons.forEach { person ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(
-                            checked = participants.contains(id),
-                            onCheckedChange = { checked -> participants = if (checked) participants + id else participants - id }
+                            checked = participants.contains(person.id),
+                            onCheckedChange = { checked -> participants = if (checked) participants + person.id else participants - person.id }
                         )
-                        Text(personName(id), style = MaterialTheme.typography.bodyMedium)
+                        Text(person.name, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
-
             item {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Równy podział", style = MaterialTheme.typography.labelLarge)
                     Switch(checked = equalSplit, onCheckedChange = { equalSplit = it })
                 }
             }
-
             if (participants.isNotEmpty() && totalAmount > 0) {
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -155,41 +156,30 @@ fun ZrzutkaDodajWydatekScreen(navController: NavController) {
                                         onValueChange = { manualAmounts = manualAmounts + (id to it) },
                                         modifier = Modifier.width(130.dp),
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                        singleLine = true,
-                                        suffix = { Text("zł") }
+                                        singleLine = true, suffix = { Text("zł") }
                                     )
                                 }
                             }
                         }
-                        if (!equalSplit && participants.isNotEmpty()) {
-                            val diff = kotlin.math.abs(manualSum - totalAmount)
-                            if (diff > 0.01) {
-                                Text(
-                                    "Suma udziałów (${FormatUtils.formatAmount(manualSum)}) ≠ kwota (${FormatUtils.formatAmount(totalAmount)})",
-                                    color = MaterialTheme.colorScheme.error,
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
+                        if (!equalSplit && participants.isNotEmpty() && kotlin.math.abs(manualSum - totalAmount) > 0.01) {
+                            Text(
+                                "Suma udziałów (${FormatUtils.formatAmount(manualSum)}) ≠ kwota (${FormatUtils.formatAmount(totalAmount)})",
+                                color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall
+                            )
                         }
                     }
                 }
             }
-
             item {
                 Button(
                     onClick = {
-                        val splits = if (equalSplit) {
-                            participants.map { it to equalShare }
-                        } else {
-                            participants.map { id -> id to (manualAmounts[id]?.replace(",", ".")?.toDoubleOrNull() ?: 0.0) }
-                        }
-                        viewModel.save(description.trim(), totalAmount, payerId, splits)
+                        val splits = if (equalSplit) participants.map { it to equalShare }
+                        else participants.map { id -> id to (manualAmounts[id]?.replace(",", ".")?.toDoubleOrNull() ?: 0.0) }
+                        viewModel.save(description.trim(), totalAmount, payerId!!, splits)
                     },
-                    enabled = canSave,
-                    modifier = Modifier.fillMaxWidth()
+                    enabled = canSave, modifier = Modifier.fillMaxWidth()
                 ) { Text("Zapisz") }
             }
-
             item { Spacer(Modifier.height(80.dp)) }
         }
     }

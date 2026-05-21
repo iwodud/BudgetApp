@@ -46,9 +46,6 @@ data class SavingsJar(
     val createdAt: Long = System.currentTimeMillis()
 )
 
-const val ZRZUTKA_SELF_ID = -1L
-const val ZRZUTKA_SELF_NAME = "Ja"
-
 data class ZrzutkaPerson(val id: Long, val name: String, val balance: Double = 0.0)
 
 data class ZrzutkaExpense(
@@ -63,6 +60,8 @@ data class ZrzutkaExpense(
 )
 
 data class ZrzutkaSplit(val personId: Long, val personName: String, val shareAmount: Double)
+
+data class ZrzutkaSettlement(val fromPersonId: Long, val fromName: String, val toPersonId: Long, val toName: String, val amount: Double)
 
 data class SavingsJarBudgetPlan(
     val id: Long = 0,

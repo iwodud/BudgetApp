@@ -52,7 +52,7 @@ interface ZrzutkaRepository {
     suspend fun deletePerson(person: ZrzutkaPerson)
     suspend fun insertExpense(description: String, totalAmount: Double, date: Long, payerId: Long, splits: List<Pair<Long, Double>>)
     suspend fun deleteExpense(expense: ZrzutkaExpense)
-    suspend fun settleWithPerson(personId: Long)
+    suspend fun settleAll()
 }
 
 interface SavingsJarRepository {

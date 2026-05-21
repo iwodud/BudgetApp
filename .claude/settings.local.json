@@ -3,7 +3,17 @@
     "allow": [
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git restore *)",
+      "Bash(git checkout *)",
+      "Bash(git *)",
+      "Bash(mkdir -p /home/iwo-dudkiewicz/AndroidStudioProjects/BudgetApp/app/src/main/java/com/example/budgetapp/presentation/splid)",
+      "Bash(mkdir -p /home/iwo-dudkiewicz/AndroidStudioProjects/BudgetApp/app/src/main/java/com/example/budgetapp/presentation/fwn)",
+      "Bash(./gradlew compileDebugKotlin)",
+      "Bash(export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64)",
+      "Read(//usr/lib/**)",
+      "Read(//opt/**)",
+      "Bash(JAVA_HOME=/home/iwo-dudkiewicz/.jdks/openjdk-25.0.1 ./gradlew compileDebugKotlin)"
     ]
   }
 }

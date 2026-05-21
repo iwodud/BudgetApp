@@ -14,17 +14,12 @@ class ZrzutkaRepositoryImpl(
 
     override fun getPersonsWithBalance(): Flow<List<ZrzutkaPerson>> =
         combine(personDao.getAllPersons(), expenseDao.getAllExpenses(), splitDao.getAllSplits()) { persons, expenses, splits ->
-            val splitsByExpense = splits.groupBy { it.expenseId }
-            persons.map { person ->
-                val unsettled = expenses.filter { !it.settled }
-                val owedToMe = unsettled
-                    .filter { it.payerId == ZRZUTKA_SELF_ID }
-                    .sumOf { exp -> splitsByExpense[exp.id]?.filter { it.personId == person.id }?.sumOf { it.shareAmount } ?: 0.0 }
-                val iOwe = unsettled
-                    .filter { it.payerId == person.id }
-                    .sumOf { exp -> splitsByExpense[exp.id]?.filter { it.personId == ZRZUTKA_SELF_ID }?.sumOf { it.shareAmount } ?: 0.0 }
-                ZrzutkaPerson(id = person.id, name = person.name, balance = owedToMe - iOwe)
-            }
+            val net = mutableMapOf<Long, Double>()
+            val unsettled = expenses.filter { !it.settled }
+            val unsettledIds = unsettled.map { it.id }.toSet()
+            for (expense in unsettled) net[expense.payerId] = (net[expense.payerId] ?: 0.0) + expense.totalAmount
+            for (split in splits.filter { it.expenseId in unsettledIds }) net[split.personId] = (net[split.personId] ?: 0.0) - split.shareAmount
+            persons.map { ZrzutkaPerson(id = it.id, name = it.name, balance = net[it.id] ?: 0.0) }
         }
 
     override fun getAllPersonsPlain(): Flow<List<ZrzutkaPerson>> =
@@ -56,24 +51,15 @@ class ZrzutkaRepositoryImpl(
         expenseDao.delete(ZrzutkaExpenseEntity(id = expense.id, description = expense.description, totalAmount = expense.totalAmount, date = expense.date, payerId = expense.payerId, settled = expense.settled))
     }
 
-    override suspend fun settleWithPerson(personId: Long) {
-        val expenses = expenseDao.getAllExpensesOnce()
-        val splits = splitDao.getAllSplitsOnce()
-        val splitsByExpense = splits.groupBy { it.expenseId }
-        val toSettle = expenses.filter { exp ->
-            !exp.settled && (
-                (exp.payerId == ZRZUTKA_SELF_ID && splitsByExpense[exp.id]?.any { it.personId == personId } == true) ||
-                (exp.payerId == personId && splitsByExpense[exp.id]?.any { it.personId == ZRZUTKA_SELF_ID } == true)
-            )
-        }.map { it.id }
+    override suspend fun settleAll() {
+        val toSettle = expenseDao.getAllExpensesOnce().filter { !it.settled }.map { it.id }
         if (toSettle.isNotEmpty()) expenseDao.markSettled(toSettle)
     }
 
     private fun ZrzutkaExpenseEntity.toDomain(personMap: Map<Long, String>, splits: List<ZrzutkaSplitEntity>) = ZrzutkaExpense(
-        id = id, description = description, totalAmount = totalAmount, date = date,
-        payerId = payerId,
-        payerName = if (payerId == ZRZUTKA_SELF_ID) ZRZUTKA_SELF_NAME else personMap[payerId] ?: "Nieznany",
-        splits = splits.map { s -> ZrzutkaSplit(personId = s.personId, personName = if (s.personId == ZRZUTKA_SELF_ID) ZRZUTKA_SELF_NAME else personMap[s.personId] ?: "Nieznany", shareAmount = s.shareAmount) },
+        id = id, description = description, totalAmount = totalAmount, date = date, payerId = payerId,
+        payerName = personMap[payerId] ?: "Nieznany",
+        splits = splits.map { s -> ZrzutkaSplit(s.personId, personMap[s.personId] ?: "Nieznany", s.shareAmount) },
         settled = settled
     )
 }

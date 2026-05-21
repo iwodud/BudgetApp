@@ -14,6 +14,7 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
         database.execSQL("CREATE TABLE IF NOT EXISTS zrzutka_expenses (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, description TEXT NOT NULL, total_amount REAL NOT NULL, date INTEGER NOT NULL, payer_id INTEGER NOT NULL, settled INTEGER NOT NULL DEFAULT 0)")
         database.execSQL("CREATE TABLE IF NOT EXISTS zrzutka_splits (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, expense_id INTEGER NOT NULL, person_id INTEGER NOT NULL, share_amount REAL NOT NULL, FOREIGN KEY(expense_id) REFERENCES zrzutka_expenses(id) ON DELETE CASCADE)")
         database.execSQL("CREATE INDEX IF NOT EXISTS index_zrzutka_splits_expense_id ON zrzutka_splits(expense_id)")
+        database.execSQL("INSERT INTO zrzutka_persons (name) VALUES ('Ja')")
     }
 }
 
@@ -118,6 +119,8 @@ object DatabaseSeeder {
 
         savingsJarDao.addToAmount(jar1Id, 800.0)
         savingsJarDao.addToAmount(jar2Id, 700.0)
+
+        db.zrzutkaPersonDao().insert(com.example.budgetapp.data.local.entity.ZrzutkaPersonEntity(name = "Ja"))
 
         val c = Calendar.getInstance()
         val currentMonth = "${c.get(Calendar.YEAR)}-${(c.get(Calendar.MONTH) + 1).toString().padStart(2, '0')}"
