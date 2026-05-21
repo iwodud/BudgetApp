@@ -66,9 +66,7 @@ fun ZrzutkaHistoriaScreen(navController: NavController, initialPersonId: Long = 
 
     val filtered = remember(state.expenses, selectedPersonId) {
         if (selectedPersonId == -1L) state.expenses
-        else state.expenses.filter { exp ->
-            exp.payerId == selectedPersonId || exp.splits.any { it.personId == selectedPersonId }
-        }
+        else state.expenses.filter { exp -> exp.payerId == selectedPersonId }
     }
 
     deleteCandidate?.let { exp ->
