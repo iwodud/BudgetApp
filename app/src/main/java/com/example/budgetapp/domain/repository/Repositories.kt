@@ -53,6 +53,7 @@ interface ZrzutkaRepository {
     suspend fun insertExpense(description: String, totalAmount: Double, date: Long, payerId: Long, splits: List<Pair<Long, Double>>)
     suspend fun deleteExpense(expense: ZrzutkaExpense)
     suspend fun settleAll()
+    suspend fun resetAll()
 }
 
 interface SavingsJarRepository {

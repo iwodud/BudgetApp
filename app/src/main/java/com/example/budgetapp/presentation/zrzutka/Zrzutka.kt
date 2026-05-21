@@ -47,6 +47,7 @@ class ZrzutkaViewModel(private val repo: ZrzutkaRepository) : ViewModel() {
     fun addPerson(name: String) = viewModelScope.launch { repo.insertPerson(name) }
     fun deletePerson(person: ZrzutkaPerson) = viewModelScope.launch { repo.deletePerson(person) }
     fun settleAll() = viewModelScope.launch { repo.settleAll() }
+    fun resetAll() = viewModelScope.launch { repo.resetAll() }
 
     private fun calculateSettlement(persons: List<ZrzutkaPerson>): List<ZrzutkaSettlement> {
         data class Entry(val id: Long, val name: String, var balance: Double)
@@ -82,6 +83,7 @@ fun ZrzutkaScreen(navController: NavController) {
 
     var showAddDialog by remember { mutableStateOf(false) }
     var showSettleDialog by remember { mutableStateOf(false) }
+    var showResetDialog by remember { mutableStateOf(false) }
     var deleteCandidate by remember { mutableStateOf<ZrzutkaPerson?>(null) }
 
     if (showAddDialog) {
@@ -103,6 +105,16 @@ fun ZrzutkaScreen(navController: NavController) {
             settlement = state.settlement,
             onDismiss = { showSettleDialog = false },
             onConfirm = { viewModel.settleAll(); showSettleDialog = false }
+        )
+    }
+
+    if (showResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            title = { Text("Zresetuj Zrzutkę") },
+            text = { Text("Usunąć wszystkich uczestników i całą historię wydatków? Zostaniesz przywrócony jako jedyna osoba.") },
+            confirmButton = { TextButton(onClick = { viewModel.resetAll(); showResetDialog = false }) { Text("Resetuj", color = MaterialTheme.colorScheme.error) } },
+            dismissButton = { TextButton(onClick = { showResetDialog = false }) { Text("Anuluj") } }
         )
     }
 
@@ -139,6 +151,9 @@ fun ZrzutkaScreen(navController: NavController) {
                         Icon(Icons.Default.CheckCircle, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
                         Text("Rozlicz")
+                    }
+                    IconButton(onClick = { showResetDialog = true }) {
+                        Icon(Icons.Default.RestartAlt, contentDescription = "Resetuj")
                     }
                 }
             }

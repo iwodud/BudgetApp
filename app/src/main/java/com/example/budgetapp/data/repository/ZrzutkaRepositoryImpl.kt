@@ -56,6 +56,12 @@ class ZrzutkaRepositoryImpl(
         if (toSettle.isNotEmpty()) expenseDao.markSettled(toSettle)
     }
 
+    override suspend fun resetAll() {
+        expenseDao.deleteAll()
+        personDao.deleteAll()
+        personDao.insert(ZrzutkaPersonEntity(name = "Ja"))
+    }
+
     private fun ZrzutkaExpenseEntity.toDomain(personMap: Map<Long, String>, splits: List<ZrzutkaSplitEntity>) = ZrzutkaExpense(
         id = id, description = description, totalAmount = totalAmount, date = date, payerId = payerId,
         payerName = personMap[payerId] ?: "Nieznany",
