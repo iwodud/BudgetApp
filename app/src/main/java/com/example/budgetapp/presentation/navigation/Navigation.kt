@@ -2,6 +2,8 @@ package com.example.budgetapp.presentation.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.PieChart
@@ -20,8 +22,10 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.budgetapp.presentation.budget.BudgetScreen
 import com.example.budgetapp.presentation.dashboard.DashboardScreen
+import com.example.budgetapp.presentation.fwn.FwnScreen
 import com.example.budgetapp.presentation.savings.SavingsScreen
 import com.example.budgetapp.presentation.settings.SettingsScreen
+import com.example.budgetapp.presentation.splid.SplidScreen
 import com.example.budgetapp.presentation.statistics.StatisticsScreen
 import com.example.budgetapp.presentation.transactions.AddEditTransactionScreen
 import com.example.budgetapp.presentation.transactions.TransactionListScreen
@@ -33,6 +37,8 @@ sealed class Screen(val route: String) {
     object Settings : Screen("settings")
     object Budget : Screen("budget")
     object Savings : Screen("savings")
+    object Splid : Screen("splid")
+    object Fwn : Screen("fwn")
     object AddEditTransaction : Screen("add_edit_transaction/{transactionId}") {
         fun createRoute(transactionId: Long = -1L) = "add_edit_transaction/$transactionId"
     }
@@ -44,7 +50,8 @@ val bottomNavItems = listOf(
     BottomNavItem("Start", Icons.Default.Home, Screen.Dashboard),
     BottomNavItem("Transakcje", Icons.Default.List, Screen.Transactions),
     BottomNavItem("Statystyki", Icons.Default.PieChart, Screen.Statistics),
-    BottomNavItem("Ustawienia", Icons.Default.Settings, Screen.Settings)
+    BottomNavItem("Splid", Icons.Default.Group, Screen.Splid),
+    BottomNavItem("FWN", Icons.Default.AccountBalance, Screen.Fwn)
 )
 
 @Composable
@@ -92,6 +99,8 @@ fun AppNavGraph(isDarkMode: Boolean, onToggleDarkMode: (Boolean) -> Unit) {
             }
             composable(Screen.Budget.route) { BudgetScreen(navController) }
             composable(Screen.Savings.route) { SavingsScreen(navController) }
+            composable(Screen.Splid.route) { SplidScreen(navController) }
+            composable(Screen.Fwn.route) { FwnScreen(navController) }
             composable(
                 route = Screen.AddEditTransaction.route,
                 arguments = listOf(navArgument("transactionId") { type = NavType.LongType; defaultValue = -1L })
