@@ -8,6 +8,15 @@ import com.example.budgetapp.data.local.dao.*
 import com.example.budgetapp.data.local.entity.*
 import java.util.Calendar
 
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL("CREATE TABLE IF NOT EXISTS zrzutka_persons (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, name TEXT NOT NULL)")
+        database.execSQL("CREATE TABLE IF NOT EXISTS zrzutka_expenses (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, description TEXT NOT NULL, total_amount REAL NOT NULL, date INTEGER NOT NULL, payer_id INTEGER NOT NULL, settled INTEGER NOT NULL DEFAULT 0)")
+        database.execSQL("CREATE TABLE IF NOT EXISTS zrzutka_splits (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, expense_id INTEGER NOT NULL, person_id INTEGER NOT NULL, share_amount REAL NOT NULL, FOREIGN KEY(expense_id) REFERENCES zrzutka_expenses(id) ON DELETE CASCADE)")
+        database.execSQL("CREATE INDEX IF NOT EXISTS index_zrzutka_splits_expense_id ON zrzutka_splits(expense_id)")
+    }
+}
+
 val MIGRATION_1_2 = object : Migration(1, 2) {
     override fun migrate(database: SupportSQLiteDatabase) {
         database.execSQL(
@@ -23,8 +32,8 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
 }
 
 @Database(
-    entities = [TransactionEntity::class, CategoryEntity::class, BudgetPlanEntity::class, SavingsJarEntity::class, SavingsJarBudgetPlanEntity::class],
-    version = 2,
+    entities = [TransactionEntity::class, CategoryEntity::class, BudgetPlanEntity::class, SavingsJarEntity::class, SavingsJarBudgetPlanEntity::class, ZrzutkaPersonEntity::class, ZrzutkaExpenseEntity::class, ZrzutkaSplitEntity::class],
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -33,13 +42,16 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun budgetPlanDao(): BudgetPlanDao
     abstract fun savingsJarDao(): SavingsJarDao
     abstract fun savingsJarBudgetPlanDao(): SavingsJarBudgetPlanDao
+    abstract fun zrzutkaPersonDao(): ZrzutkaPersonDao
+    abstract fun zrzutkaExpenseDao(): ZrzutkaExpenseDao
+    abstract fun zrzutkaSplitDao(): ZrzutkaSplitDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "budget_database")
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build().also { INSTANCE = it }
             }
         }

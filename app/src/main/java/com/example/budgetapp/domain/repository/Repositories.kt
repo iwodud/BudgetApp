@@ -44,6 +44,17 @@ interface SavingsJarBudgetPlanRepository {
     suspend fun copyFromPreviousMonth(fromMonth: String, toMonth: String)
 }
 
+interface ZrzutkaRepository {
+    fun getPersonsWithBalance(): Flow<List<ZrzutkaPerson>>
+    fun getAllPersonsPlain(): Flow<List<ZrzutkaPerson>>
+    fun getAllExpenses(): Flow<List<ZrzutkaExpense>>
+    suspend fun insertPerson(name: String)
+    suspend fun deletePerson(person: ZrzutkaPerson)
+    suspend fun insertExpense(description: String, totalAmount: Double, date: Long, payerId: Long, splits: List<Pair<Long, Double>>)
+    suspend fun deleteExpense(expense: ZrzutkaExpense)
+    suspend fun settleWithPerson(personId: Long)
+}
+
 interface SavingsJarRepository {
     fun getAllSavingsJars(): Flow<List<SavingsJar>>
     suspend fun getSavingsJarById(id: Long): SavingsJar?
