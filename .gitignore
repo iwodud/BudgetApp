@@ -16,3 +16,5 @@ local.properties
 *.aar
 proguard/
 *.log
+polecenie.txt
+spec.md
