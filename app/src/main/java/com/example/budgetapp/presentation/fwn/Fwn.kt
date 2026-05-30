@@ -68,6 +68,9 @@ class FwnViewModel(private val repo: FwnRepository) : ViewModel() {
     fun addPlannedExpense(name: String, amount: Double, month: Int) =
         viewModelScope.launch { repo.insertPlannedExpense(name, amount, month) }
 
+    fun updatePlannedExpense(expense: FwnPlannedExpense) =
+        viewModelScope.launch { repo.updatePlannedExpense(expense) }
+
     fun deletePlannedExpense(expense: FwnPlannedExpense) =
         viewModelScope.launch { repo.deletePlannedExpense(expense) }
 
@@ -97,6 +100,7 @@ fun FwnScreen(navController: NavController) {
 
     var showAddExpenseDialog by remember { mutableStateOf(false) }
     var showAddTransactionDialog by remember { mutableStateOf(false) }
+    var editExpenseCandidate by remember { mutableStateOf<FwnPlannedExpense?>(null) }
     var deleteExpenseCandidate by remember { mutableStateOf<FwnPlannedExpense?>(null) }
     var deleteTransactionCandidate by remember { mutableStateOf<FwnTransaction?>(null) }
 
@@ -106,6 +110,17 @@ fun FwnScreen(navController: NavController) {
             onSave = { name, amount, month ->
                 viewModel.addPlannedExpense(name, amount, month)
                 showAddExpenseDialog = false
+            }
+        )
+    }
+
+    editExpenseCandidate?.let { expense ->
+        AddPlannedExpenseDialog(
+            initial = expense,
+            onDismiss = { editExpenseCandidate = null },
+            onSave = { name, amount, month ->
+                viewModel.updatePlannedExpense(expense.copy(name = name, amount = amount, month = month))
+                editExpenseCandidate = null
             }
         )
     }
@@ -207,7 +222,11 @@ fun FwnScreen(navController: NavController) {
                 }
             } else {
                 items(state.plannedExpenses, key = { "expense_${it.id}" }) { expense ->
-                    PlannedExpenseCard(expense = expense, onDelete = { deleteExpenseCandidate = expense })
+                    PlannedExpenseCard(
+                        expense = expense,
+                        onEdit = { editExpenseCandidate = expense },
+                        onDelete = { deleteExpenseCandidate = expense }
+                    )
                 }
             }
 
@@ -337,7 +356,7 @@ private fun MonthActionChip(
 }
 
 @Composable
-private fun PlannedExpenseCard(expense: FwnPlannedExpense, onDelete: () -> Unit) {
+private fun PlannedExpenseCard(expense: FwnPlannedExpense, onEdit: () -> Unit, onDelete: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.padding(12.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Surface(
@@ -368,7 +387,9 @@ private fun PlannedExpenseCard(expense: FwnPlannedExpense, onDelete: () -> Unit)
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(Modifier.width(4.dp))
+            IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.Default.Edit, "Edytuj", modifier = Modifier.size(18.dp))
+            }
             IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
                 Icon(Icons.Default.Delete, "Usuń", modifier = Modifier.size(18.dp))
             }
@@ -417,14 +438,18 @@ private fun FwnTransactionCard(tx: FwnTransaction, onDelete: () -> Unit) {
 }
 
 @Composable
-fun AddPlannedExpenseDialog(onDismiss: () -> Unit, onSave: (String, Double, Int) -> Unit) {
-    var name by remember { mutableStateOf("") }
-    var amountStr by remember { mutableStateOf("") }
-    var selectedMonth by remember { mutableStateOf(Calendar.getInstance().get(Calendar.MONTH) + 1) }
+fun AddPlannedExpenseDialog(
+    initial: FwnPlannedExpense? = null,
+    onDismiss: () -> Unit,
+    onSave: (String, Double, Int) -> Unit
+) {
+    var name by remember { mutableStateOf(initial?.name ?: "") }
+    var amountStr by remember { mutableStateOf(initial?.amount?.toBigDecimal()?.stripTrailingZeros()?.toPlainString() ?: "") }
+    var selectedMonth by remember { mutableStateOf(initial?.month ?: Calendar.getInstance().get(Calendar.MONTH) + 1) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Planowany wydatek") },
+        title = { Text(if (initial == null) "Planowany wydatek" else "Edytuj wydatek") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
