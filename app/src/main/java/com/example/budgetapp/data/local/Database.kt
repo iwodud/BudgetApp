@@ -8,6 +8,13 @@ import com.example.budgetapp.data.local.dao.*
 import com.example.budgetapp.data.local.entity.*
 import java.util.Calendar
 
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL("CREATE TABLE IF NOT EXISTS fwn_planned_expenses (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, name TEXT NOT NULL, amount REAL NOT NULL, month INTEGER NOT NULL)")
+        database.execSQL("CREATE TABLE IF NOT EXISTS fwn_transactions (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, type TEXT NOT NULL, amount REAL NOT NULL, description TEXT NOT NULL, date INTEGER NOT NULL, linked_expense_id INTEGER)")
+    }
+}
+
 val MIGRATION_2_3 = object : Migration(2, 3) {
     override fun migrate(database: SupportSQLiteDatabase) {
         database.execSQL("CREATE TABLE IF NOT EXISTS zrzutka_persons (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, name TEXT NOT NULL)")
@@ -33,8 +40,8 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
 }
 
 @Database(
-    entities = [TransactionEntity::class, CategoryEntity::class, BudgetPlanEntity::class, SavingsJarEntity::class, SavingsJarBudgetPlanEntity::class, ZrzutkaPersonEntity::class, ZrzutkaExpenseEntity::class, ZrzutkaSplitEntity::class],
-    version = 3,
+    entities = [TransactionEntity::class, CategoryEntity::class, BudgetPlanEntity::class, SavingsJarEntity::class, SavingsJarBudgetPlanEntity::class, ZrzutkaPersonEntity::class, ZrzutkaExpenseEntity::class, ZrzutkaSplitEntity::class, FwnPlannedExpenseEntity::class, FwnTransactionEntity::class],
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -46,13 +53,15 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun zrzutkaPersonDao(): ZrzutkaPersonDao
     abstract fun zrzutkaExpenseDao(): ZrzutkaExpenseDao
     abstract fun zrzutkaSplitDao(): ZrzutkaSplitDao
+    abstract fun fwnPlannedExpenseDao(): FwnPlannedExpenseDao
+    abstract fun fwnTransactionDao(): FwnTransactionDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "budget_database")
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .build().also { INSTANCE = it }
             }
         }
@@ -132,5 +141,40 @@ object DatabaseSeeder {
             BudgetPlanEntity(categoryId = catMap["Rachunki"]!!, month = currentMonth, plannedAmount = 1500.0),
             BudgetPlanEntity(categoryId = catMap["Zdrowie"]!!, month = currentMonth, plannedAmount = 150.0)
         ))
+    }
+
+    suspend fun seedFwn(db: AppDatabase) {
+        val fwnPlannedDao = db.fwnPlannedExpenseDao()
+        val fwnTxDao = db.fwnTransactionDao()
+
+        val cal = Calendar.getInstance()
+        fun daysAgo(days: Int): Long {
+            cal.timeInMillis = System.currentTimeMillis()
+            cal.add(Calendar.DAY_OF_YEAR, -days)
+            return cal.timeInMillis
+        }
+
+        val ocId         = fwnPlannedDao.insert(FwnPlannedExpenseEntity(name = "OC samochodu",              amount = 1200.0, month = 1))
+        val acId         = fwnPlannedDao.insert(FwnPlannedExpenseEntity(name = "AC samochodu",              amount = 800.0,  month = 1))
+        val ubezMieszkId = fwnPlannedDao.insert(FwnPlannedExpenseEntity(name = "Ubezpieczenie mieszkania",  amount = 600.0,  month = 2))
+        val przegladId   = fwnPlannedDao.insert(FwnPlannedExpenseEntity(name = "Przegląd techniczny auta",  amount = 180.0,  month = 3))
+        val oponyWId     = fwnPlannedDao.insert(FwnPlannedExpenseEntity(name = "Wymiana opon (wiosna)",     amount = 300.0,  month = 4))
+        fwnPlannedDao.insert(FwnPlannedExpenseEntity(name = "Wakacje letnie",        amount = 4000.0, month = 7))
+        fwnPlannedDao.insert(FwnPlannedExpenseEntity(name = "Wymiana opon (jesień)", amount = 300.0,  month = 10))
+        fwnPlannedDao.insert(FwnPlannedExpenseEntity(name = "Prezenty świąteczne",   amount = 1200.0, month = 12))
+
+        fwnTxDao.insert(FwnTransactionEntity(type = "DEPOSIT", amount = 715.0, description = "Rata FWN", date = daysAgo(210)))
+        fwnTxDao.insert(FwnTransactionEntity(type = "DEPOSIT", amount = 715.0, description = "Rata FWN", date = daysAgo(180)))
+        fwnTxDao.insert(FwnTransactionEntity(type = "DEPOSIT", amount = 715.0, description = "Rata FWN", date = daysAgo(150)))
+        fwnTxDao.insert(FwnTransactionEntity(type = "DEPOSIT", amount = 715.0, description = "Rata FWN", date = daysAgo(120)))
+        fwnTxDao.insert(FwnTransactionEntity(type = "DEPOSIT", amount = 715.0, description = "Rata FWN", date = daysAgo(90)))
+        fwnTxDao.insert(FwnTransactionEntity(type = "DEPOSIT", amount = 715.0, description = "Rata FWN", date = daysAgo(60)))
+        fwnTxDao.insert(FwnTransactionEntity(type = "DEPOSIT", amount = 715.0, description = "Rata FWN", date = daysAgo(30)))
+
+        fwnTxDao.insert(FwnTransactionEntity(type = "WITHDRAWAL", amount = 1200.0, description = "OC samochodu",             date = daysAgo(125), linkedExpenseId = ocId))
+        fwnTxDao.insert(FwnTransactionEntity(type = "WITHDRAWAL", amount = 800.0,  description = "AC samochodu",             date = daysAgo(123), linkedExpenseId = acId))
+        fwnTxDao.insert(FwnTransactionEntity(type = "WITHDRAWAL", amount = 600.0,  description = "Ubezpieczenie mieszkania", date = daysAgo(93),  linkedExpenseId = ubezMieszkId))
+        fwnTxDao.insert(FwnTransactionEntity(type = "WITHDRAWAL", amount = 180.0,  description = "Przegląd techniczny auta", date = daysAgo(63),  linkedExpenseId = przegladId))
+        fwnTxDao.insert(FwnTransactionEntity(type = "WITHDRAWAL", amount = 300.0,  description = "Wymiana opon (wiosna)",    date = daysAgo(33),  linkedExpenseId = oponyWId))
     }
 }

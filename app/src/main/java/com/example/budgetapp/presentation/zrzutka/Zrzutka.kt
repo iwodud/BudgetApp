@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -182,7 +183,7 @@ fun PersonCard(person: ZrzutkaPerson, onDelete: () -> Unit) {
                 Text(person.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(2.dp))
                 when {
-                    person.balance > 0.01 -> Text("Do otrzymania: ${FormatUtils.formatAmount(person.balance)}", color = Color(0xFF388E3C), style = MaterialTheme.typography.bodySmall)
+                    person.balance > 0.01 -> Text("Do otrzymania: ${FormatUtils.formatAmount(person.balance)}", color = if (isSystemInDarkTheme()) Color(0xFF81C784) else Color(0xFF2E7D32), style = MaterialTheme.typography.bodySmall)
                     person.balance < -0.01 -> Text("Do zapłaty: ${FormatUtils.formatAmount(-person.balance)}", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     else -> Text("Rozliczono", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                 }

@@ -13,6 +13,7 @@ interface AppContainer {
     val savingsJarRepository: SavingsJarRepository
     val savingsJarBudgetPlanRepository: SavingsJarBudgetPlanRepository
     val zrzutkaRepository: ZrzutkaRepository
+    val fwnRepository: FwnRepository
 }
 
 class AppContainerImpl(context: Context) : AppContainer {
@@ -23,4 +24,5 @@ class AppContainerImpl(context: Context) : AppContainer {
     override val savingsJarRepository: SavingsJarRepository = SavingsJarRepositoryImpl(database.savingsJarDao())
     override val savingsJarBudgetPlanRepository: SavingsJarBudgetPlanRepository = SavingsJarBudgetPlanRepositoryImpl(database.savingsJarBudgetPlanDao())
     override val zrzutkaRepository: ZrzutkaRepository = ZrzutkaRepositoryImpl(database.zrzutkaPersonDao(), database.zrzutkaExpenseDao(), database.zrzutkaSplitDao())
+    override val fwnRepository: FwnRepository = FwnRepositoryImpl(database.fwnPlannedExpenseDao(), database.fwnTransactionDao())
 }

@@ -56,6 +56,16 @@ interface ZrzutkaRepository {
     suspend fun resetAll()
 }
 
+interface FwnRepository {
+    fun getPlannedExpenses(): Flow<List<FwnPlannedExpense>>
+    fun getTransactions(): Flow<List<FwnTransaction>>
+    suspend fun insertPlannedExpense(name: String, amount: Double, month: Int)
+    suspend fun updatePlannedExpense(expense: FwnPlannedExpense)
+    suspend fun deletePlannedExpense(expense: FwnPlannedExpense)
+    suspend fun addTransaction(type: FwnTransactionType, amount: Double, description: String, linkedExpenseId: Long? = null)
+    suspend fun deleteTransaction(transaction: FwnTransaction)
+}
+
 interface SavingsJarRepository {
     fun getAllSavingsJars(): Flow<List<SavingsJar>>
     suspend fun getSavingsJarById(id: Long): SavingsJar?

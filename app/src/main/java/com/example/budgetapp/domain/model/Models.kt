@@ -70,3 +70,21 @@ data class SavingsJarBudgetPlan(
     val plannedSaveAmount: Double = 0.0,
     val plannedWithdrawAmount: Double = 0.0
 )
+
+data class FwnPlannedExpense(
+    val id: Long = 0,
+    val name: String,
+    val amount: Double,
+    val month: Int
+)
+
+enum class FwnTransactionType { DEPOSIT, WITHDRAWAL }
+
+data class FwnTransaction(
+    val id: Long = 0,
+    val type: FwnTransactionType,
+    val amount: Double,
+    val description: String,
+    val date: Long = System.currentTimeMillis(),
+    val linkedExpenseId: Long? = null
+)

@@ -20,5 +20,11 @@ class BudgetApp : Application() {
                 prefs.edit().putBoolean("seeded", true).apply()
             }
         }
+        if (!prefs.getBoolean("fwn_seeded", false)) {
+            CoroutineScope(Dispatchers.IO).launch {
+                DatabaseSeeder.seedFwn(container.database)
+                prefs.edit().putBoolean("fwn_seeded", true).apply()
+            }
+        }
     }
 }

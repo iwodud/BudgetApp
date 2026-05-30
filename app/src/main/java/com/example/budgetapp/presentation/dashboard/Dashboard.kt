@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -99,6 +100,7 @@ fun DashboardScreen(navController: NavController) {
     val app = LocalContext.current.applicationContext as BudgetApp
     val viewModel: DashboardViewModel = viewModel(factory = DashboardViewModel.factory(app.container))
     val state by viewModel.state.collectAsState()
+    val positiveColor = if (isSystemInDarkTheme()) Color(0xFF81C784) else Color(0xFF2E7D32)
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),
@@ -123,7 +125,7 @@ fun DashboardScreen(navController: NavController) {
             }
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    SummaryCard("Przychody", state.totalIncome, Color(0xFF388E3C), Modifier.weight(1f))
+                    SummaryCard("Przychody", state.totalIncome, positiveColor, Modifier.weight(1f))
                     SummaryCard("Wydatki", state.totalExpense, MaterialTheme.colorScheme.error, Modifier.weight(1f))
                 }
             }
@@ -133,7 +135,7 @@ fun DashboardScreen(navController: NavController) {
                         Text("Bilans miesiąca", style = MaterialTheme.typography.labelMedium)
                         Spacer(Modifier.height(4.dp))
                         Text(FormatUtils.formatAmount(state.balance), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
-                            color = if (state.balance >= 0) Color(0xFF388E3C) else MaterialTheme.colorScheme.error)
+                            color = if (state.balance >= 0) positiveColor else MaterialTheme.colorScheme.error)
                     }
                 }
             }

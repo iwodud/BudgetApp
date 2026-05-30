@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -178,7 +179,7 @@ fun MonthSelector(month: String, onPrevious: () -> Unit, onNext: () -> Unit) {
 fun TransactionItem(transaction: Transaction, category: Category?, onClick: () -> Unit, onDelete: (() -> Unit)? = null) {
     val amountColor = when (transaction.type) {
         TransactionType.EXPENSE, TransactionType.SAVE_TO_JAR -> MaterialTheme.colorScheme.error
-        TransactionType.INCOME, TransactionType.WITHDRAW_FROM_JAR -> Color(0xFF388E3C)
+        TransactionType.INCOME, TransactionType.WITHDRAW_FROM_JAR -> if (isSystemInDarkTheme()) Color(0xFF81C784) else Color(0xFF2E7D32)
     }
     val amountPrefix = when (transaction.type) {
         TransactionType.EXPENSE, TransactionType.SAVE_TO_JAR -> "−"
